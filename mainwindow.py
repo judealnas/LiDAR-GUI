@@ -23,7 +23,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #connecting signals to slots
         self.startButton.released.connect(self.openConnection)
         self.pauseButton.toggled.connect(self.pausePlot)
-        self.stopButton.released.connect(self.close) #connects to close() method of QMainWindow class
+    #   self.stopButton.released.connect(self.close) #connects to close() method of QMainWindow class
         self.stopButton.released.connect(self.closeConnection)
 
     
