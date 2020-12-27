@@ -6,14 +6,17 @@ from random import randint
 import socket
 import struct
 
+ui_filename = 'mainwindow.ui'
 
-class MainWindow(QtWidgets.QMainWindow):
+_, baseClass = uic.loadUiType(ui_filename)
+
+class MainWindow(baseClass):
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
         #Load the UI Page
-        uic.loadUi('mainwindow.ui', self)
+        uic.loadUi(ui_filename, self)
         
         self.x = list(range(100))
         self.y = [randint(0,1) for _ in range(100)]
