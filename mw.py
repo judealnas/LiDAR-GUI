@@ -40,11 +40,12 @@ class Ui_MainWindow(object):
         self.layoutWidget.setGeometry(QtCore.QRect(20, 270, 201, 121))
         self.layoutWidget.setObjectName("layoutWidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.layoutWidget)
+        self.verticalLayout.setSizeConstraint(QtWidgets.QLayout.SetNoConstraint)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
         self.startButton = QtWidgets.QPushButton(self.layoutWidget)
         self.startButton.setEnabled(True)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.startButton.sizePolicy().hasHeightForWidth())
@@ -87,3 +88,13 @@ class Ui_MainWindow(object):
         self.pauseButton.setText(_translate("MainWindow", "PAUSE"))
         self.stopButton.setText(_translate("MainWindow", "STOP"))
 from pyqtgraph import PlotWidget
+
+
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    MainWindow = QtWidgets.QMainWindow()
+    ui = Ui_MainWindow()
+    ui.setupUi(MainWindow)
+    MainWindow.show()
+    sys.exit(app.exec_())
