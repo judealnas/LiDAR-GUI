@@ -17,7 +17,7 @@ class LidarPlot(qtw.QWidget):
         self.plot_widget = pg.PlotWidget(axisItems={'bottom': TimestampAxisItem(orientation='bottom')})
         self.clear_button = qtw.QPushButton('Clear')
         self.pause_button = qtw.QPushButton('Pause')
-        
+        self.mode_button = qtw.QPushButton('Mode')
         
         #main layout
         self.setLayout(qtw.QVBoxLayout())
@@ -27,8 +27,10 @@ class LidarPlot(qtw.QWidget):
         
         # add horizonatl row of buttons
         self.button_layout = qtw.QHBoxLayout()
-        self.button_layout.addWidget(self.pause_button)
-        self.button_layout.addWidget(self.clear_button)
+        buttons = [self.pause_button, self.clear_button, self.mode_button]
+        for b in buttons:
+            self.button_layout.addWidget(b)
+        
         self.layout().addLayout(self.button_layout)
 
         self.show()
@@ -45,14 +47,21 @@ class LidarPlot(qtw.QWidget):
         ## Connecting signals
         self.pause_button.released.connect(self.updateData)
         self.clear_button.released.connect(self.clearData)
+        self.mode_button.released.connect(self.changeMode)
         
+    def changeMode(self):
+        if self.plot_mode == LidarPlotMode.SCROLLING:
+            self.plot_mode = LidarPlotMode.ALL
+        else: 
+            self.plot_mode = LidarPlotMode.SCROLLING
+
     def plotData(self):
         self.data_curve.setData(self.x, self.buffer)
     
     def updateData(self):
         y = random.random()*5
         self.buffer.append(y)
-        if len(self.buffer) >= self.buffer_size:
+        if (len(self.buffer) >= self.buffer_size) and self.plot_mode == LidarPlotMode.SCROLLING:
             self.buffer.pop(0)
             self.x[:-1] = self.x[1:] #rotate values left
             self.x[-1] = (self.x[-1] + 0.9) #add new larger value
@@ -66,7 +75,7 @@ class LidarPlot(qtw.QWidget):
         self.x = []
         self.plotData()
 
-t = qtc.QDateTime()
+t = qtc.QTime(0,0)
 class TimestampAxisItem(pg.AxisItem):
     def __init__(self,*args, **kwargs):
         super().__init__(*args,**kwargs)
