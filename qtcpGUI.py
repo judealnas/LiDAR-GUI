@@ -35,6 +35,10 @@ class MainWindow(baseClass):
         self.tcpSocket = QTcpSocket(self)
         self.tcpSocket.connectToHost(QHostAddress.LocalHost, 49417)
 
+        self.tcpSocket.connected.connect(lambda: print("Connected!"))
+        self.tcpSocket.disconnected.connect(lambda: print("Disconnected!"))
+        self.tcpSocket.readyRead.connect(self.update_plot_data)
+
         print("socket open and timer set\n")
 
 
@@ -42,11 +46,12 @@ class MainWindow(baseClass):
         self.data_line = self.graphWidget.plot(x, y)
     
     def pausePlot(self):
+        pass
 
-    
+
     def closeConnection(self):
         print("closing socket\n")
-        self.s.close()
+        self.tcpSocket.disconnectFromHost()
 
     def update_plot_data(self):
 
@@ -55,12 +60,10 @@ class MainWindow(baseClass):
 
         self.y = self.y[1:]  # Remove the first y element
         rec_data2 = self.tcpSocket.readAll()
-        print(rec_data2.toFloat)
+        print(type(rec_data2),float(rec_data2))
+        self.y.append(float(rec_data2))
 
-        rec_data = float(rec_data.decode("utf-8"))
-        self.y.append(rec_data)  # Add a new random value.
-
-        self.data_line.setData(self.x, self.y)  # Update the data.
+        self.data_line.setData(self.x,self.y)  # Update the data.
 
 
 
