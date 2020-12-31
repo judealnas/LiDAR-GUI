@@ -8,7 +8,7 @@ from PyQt5 import uic
 import random
 from enum import Enum, auto
 
-Ui_TcpControl, baseClass = uic.loadUiType(join(dirname(__file__),'TcpControl.ui'))
+Ui_TcpControl, baseClass = uic.loadUiType(join(dirname(__file__),'Ui_TcpControl.ui'))
 
 class TcpControl(baseClass, Ui_TcpControl):
     def __init__(self, *args, **kwargs):

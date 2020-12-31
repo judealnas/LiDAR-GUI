@@ -5,7 +5,7 @@ from PyQt5 import QtWidgets as qtw
 import random
 from enum import Enum, auto
 
-#Ui_LidarPlot, baseClass = uic.loadUiType('LidarPlot.ui')
+#Ui_LidarPlot, baseClass = uic.loadUiType('Ui_LidarPlot.ui')
 #ui_builder = Ui_LidarPlot()
 
 class LidarPlot(qtw.QWidget):
