@@ -7,7 +7,6 @@ from PyQt5 import QtWidgets as qtw
 from PyQt5 import uic
 import random
 from enum import Enum, auto
-from StatusWindow import StatusWindow as MsgWindow
 
 Ui_TcpControl, baseClass = uic.loadUiType(join(dirname(__file__),'Ui_TcpControl.ui'))
 
@@ -21,14 +20,15 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.receive_led.setMinimumSize(35,35)
         self.send_led.setMinimumSize(35,35)
         self.socket = QTcpSocket(self)
-        self.subscribers = [] # list of slots to connecct data-ready signal
+        self.subscribers = [] # list of slots to connect data-ready signal
+        
         ## signals
         self.dis_conn_button.released.connect(self.connectSocket)
         #self.socket.connected.connect(lambda: print("Connected!"))
         #self.socket.disconnected.connect(lambda: print("Disconnected!"))
         self.socket.readyRead.connect(self.readData)
 
-        self.show()
+        #self.show()
 
     def connectSocket(self):
         timeout_ms = 30*1000
@@ -100,29 +100,23 @@ class TcpControl(baseClass, Ui_TcpControl):
     
     def sendLedState(self, state):
         self.send_led.setChecked(state)
-'''
-class MsgWindow(qtw.QTextEdit):
-        
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setTextInteractionFlags(qtc.Qt.NoTextInteraction)       
-        self.show()
-    
-    @qtc.pyqtSlot(qtc.QByteArray)
-    def receiveData(self, qdata):
-        data = float(qdata)
-        self.append(str(data))
-'''
-class Manager(qtw.QApplication):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
-        self.Tcp = TcpControl()
-        self.Msg = MsgWindow()
-
-        self.Tcp.addSubscriber(self.Msg.receiveData)
 
 
 if __name__ == "__main__":
+    from StatusWindow import StatusWindow as MsgWindow
+    
+    class Manager(qtw.QApplication):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            self.Tcp = TcpControl()
+            self.Tcp.show()
+
+            self.Msg = MsgWindow()
+            self.Msg.show()
+
+            self.Tcp.addSubscriber(self.Msg.receiveData)
+    
     app = Manager(sys.argv)
     sys.exit(app.exec_())

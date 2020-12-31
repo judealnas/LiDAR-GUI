@@ -22,7 +22,6 @@ class StatusWindow(qtw.QPlainTextEdit):
         self.sig_add_msg.connect(self.addMsg)
         self.sig_log_msg.connect(self.logMsg)
 
-        self.show()
    
     @qtc.pyqtSlot(qtc.QByteArray)
     def receiveData(self, qdata):
@@ -59,4 +58,6 @@ class StatusWindow(qtw.QPlainTextEdit):
 
 if __name__ == "__main__":
     app = qtw.QApplication(sys.argv)
+    window = StatusWindow()
+    window.show()
     sys.exit(app.exec_())
