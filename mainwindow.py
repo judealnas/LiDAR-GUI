@@ -1,76 +1,43 @@
-from PyQt5 import QtWidgets, QtCore, uic
-from pyqtgraph import PlotWidget
-import pyqtgraph as pg
+import os
 import sys
-from random import randint
-import socket
-import struct
+sys.path.extend([os.path.join(os.path.dirname(__file__), x) for x in ['TcpControl', 'LidarPlot']])
 
-ui_filename = 'mainwindow.ui'
+from PyQt5 import QtWidgets as qtw
+from PyQt5 import QtCore as qtc
 
-_, baseClass = uic.loadUiType(ui_filename)
+from TcpControl import TcpControl 
+from LidarPlot import LidarPlot  
+from StatusWindow import StatusWindow 
 
-class MainWindow(baseClass):
+class MainWindow(qtw.QMainWindow):
 
     def __init__(self, *args, **kwargs):
-        super(MainWindow, self).__init__(*args, **kwargs)
-
-        #Load the UI Page
-        uic.loadUi(ui_filename, self)
+        super().__init__(*args, **kwargs)
         
-        self.x = list(range(100))
-        self.y = [randint(0,1) for _ in range(100)]
-       
-        self.data_line = self.graphWidget.plot(self.x, self.y)
-
-        #connecting signals to slots
-        self.startButton.released.connect(self.openConnection)
-        self.pauseButton.toggled.connect(self.pausePlot)
-    #   self.stopButton.released.connect(self.close) #connects to close() method of QMainWindow class
-        self.stopButton.released.connect(self.closeConnection)
-
-    
-    def openConnection(self):
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #AF_INET = IPv4; SOCK_STREAM = TCP
-        self.s.connect((socket.gethostname(), 49417))
-
-        self.timer = QtCore.QTimer()
-        self.timer.setInterval(50)
-        self.timer.timeout.connect(self.update_plot_data)
-        self.timer.start()
-        print("socket open and timer set\n")
-
-
-    def plot(self, x, y):
-        self.data_line = self.graphWidget.plot(x, y)
-    
-    def pausePlot(self):
-        if self.pauseButton.isChecked():
-            self.timer.stop()
-        else:
-            self.timer.start()
-    
-    def closeConnection(self):
-        print("closing socket\n")
-        self.s.close()
-        self.timer.stop()
+        self.central_widget = qtw.QWidget()
+        self.grid = qtw.QGridLayout(self.central_widget)
         
-    def update_plot_data(self):
-
-        self.x = self.x[1:]  # Remove the first x element.
-        self.x.append(self.x[-1] + 1)  # Add a new value 1 higher than the last.
-
-        self.y = self.y[1:]  # Remove the first y element
-        rec_data = self.s.recv(10)
-        rec_data = float(rec_data.decode("utf-8"))
-        self.y.append(rec_data)  # Add a new random value.
-
-        self.data_line.setData(self.x, self.y)  # Update the data.
+        self.lidar_plot = LidarPlot(self.central_widget)
+        self.grid.addWidget(self.lidar_plot, 0,0,3,1)
+        
+        self.tcp_control = TcpControl()
+        self.tcp_control.sizePolicy().setVerticalStretch(1)
+        self.tcp_control.sizePolicy().setHorizontalStretch(1)
+        self.grid.addWidget(self.tcp_control, 0,1,1,1)
 
 
+        self.status_window = StatusWindow()
+        self.status_window.sizePolicy().setVerticalStretch(2)
+        self.grid.addWidget(self.status_window, 1,1,1,1)
+        
 
+        self.central_widget.setLayout(self.grid)
+        self.setCentralWidget(self.central_widget)
+
+        
+        
 def main():
-    app = QtWidgets.QApplication(sys.argv)
+    app = qtw.QApplication(sys.argv)
     main = MainWindow()
     main.show()
     sys.exit(app.exec_())
