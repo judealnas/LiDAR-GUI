@@ -17,14 +17,18 @@ class Ui_TcpControl(object):
         TcpControl.resize(450, 300)
         self.horizontalLayout = QtWidgets.QHBoxLayout(TcpControl)
         self.horizontalLayout.setObjectName("horizontalLayout")
+
         self.verticalLayout_2 = QtWidgets.QVBoxLayout()
         self.verticalLayout_2.setObjectName("verticalLayout_2")
+        
         self.formLayout = QtWidgets.QFormLayout()
         self.formLayout.setLabelAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.formLayout.setObjectName("formLayout")
+        
         self.address_lineedit_label = QtWidgets.QLabel(TcpControl)
         self.address_lineedit_label.setObjectName("address_lineedit_label")
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.address_lineedit_label)
+        
         self.address_lineedit = QtWidgets.QLineEdit(TcpControl)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
@@ -33,9 +37,11 @@ class Ui_TcpControl(object):
         self.address_lineedit.setSizePolicy(sizePolicy)
         self.address_lineedit.setObjectName("address_lineedit")
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.address_lineedit)
+        
         self.port_lineeidt_label = QtWidgets.QLabel(TcpControl)
         self.port_lineeidt_label.setObjectName("port_lineeidt_label")
         self.formLayout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.port_lineeidt_label)
+        
         self.port_lineedit = QtWidgets.QLineEdit(TcpControl)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
@@ -45,33 +51,43 @@ class Ui_TcpControl(object):
         self.port_lineedit.setObjectName("port_lineedit")
         self.formLayout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.port_lineedit)
         self.verticalLayout_2.addLayout(self.formLayout)
+        
         self.dis_conn_button = QtWidgets.QPushButton(TcpControl)
         self.dis_conn_button.setObjectName("dis_conn_button")
         self.verticalLayout_2.addWidget(self.dis_conn_button)
+        
         self.horizontalLayout.addLayout(self.verticalLayout_2)
+        
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
+        
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
+        
         self.send_led = LedIndicator(TcpControl)
         self.send_led.setEnabled(False)
         self.send_led.setObjectName("send_led")
         self.verticalLayout.addWidget(self.send_led)
+        
         self.send_led_label = QtWidgets.QLabel(TcpControl)
         self.send_led_label.setAlignment(QtCore.Qt.AlignCenter)
         self.send_led_label.setObjectName("send_led_label")
         self.verticalLayout.addWidget(self.send_led_label)
+        
         spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem1)
+        
         self.receive_led = LedIndicator(TcpControl)
         self.receive_led.setEnabled(False)
         self.receive_led.setObjectName("receive_led")
         self.verticalLayout.addWidget(self.receive_led)
+        
         self.receive_led_label = QtWidgets.QLabel(TcpControl)
         self.receive_led_label.setAlignment(QtCore.Qt.AlignCenter)
         self.receive_led_label.setWordWrap(False)
         self.receive_led_label.setObjectName("receive_led_label")
         self.verticalLayout.addWidget(self.receive_led_label)
+        
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem2)
         self.horizontalLayout.addLayout(self.verticalLayout)
