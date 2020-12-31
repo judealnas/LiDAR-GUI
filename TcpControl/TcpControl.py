@@ -91,7 +91,9 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.subscribers.append(slot)
         self.notify_subscribers.connect(slot)
 
+    def removeSusbcriber(self,slot):
         self.subscribers.remove(slot)
+        self.notify_subscribers.disconnect(slot)
 
     def receiveLedState(self, state):
         self.receive_led.setChecked(state)
