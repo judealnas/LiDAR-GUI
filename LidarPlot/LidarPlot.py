@@ -10,6 +10,9 @@ from enum import Enum, auto
 
 class LidarPlot(qtw.QWidget):
     
+    sig_log_event = qtc.pyqtSignal(str)
+    
+
     def __init__(self,*args, **kwargs):
         super().__init__(*args, **kwargs)
 

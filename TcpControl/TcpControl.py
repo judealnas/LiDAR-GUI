@@ -12,7 +12,8 @@ Ui_TcpControl, baseClass = uic.loadUiType(join(dirname(__file__),'Ui_TcpControl.
 
 class TcpControl(baseClass, Ui_TcpControl):
 
-    notify_subscribers = qtc.pyqtSignal(qtc.QByteArray)
+    sig_notify_subscribers = qtc.pyqtSignal(qtc.QByteArray)
+    sig_log_event = qtc.pyqtSignal(str)
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args,**kwargs)
@@ -60,8 +61,11 @@ class TcpControl(baseClass, Ui_TcpControl):
         
     def panelConnected(self, state):
         '''
-        Once TCP connection is established, disable line edits, change button name,
-        and rewire button signals
+        Disable line edits, change button name, and rewire button signals according
+        to TCP socket state.
+
+        state = True: Socket connected; disable UI elements
+        state = False: Socket disconnected; enable UI elements
         '''
         if state:
             button_text = "DISCONNECT"
@@ -84,16 +88,16 @@ class TcpControl(baseClass, Ui_TcpControl):
     def readData(self):
         self.receiveLedState(True)
         data_in = self.socket.readAll()
-        self.notify_subscribers.emit(data_in)
+        self.sig_notify_subscribers.emit(data_in)
         self.receiveLedState(False)
     
     def addSubscriber(self, slot):
         self.subscribers.append(slot)
-        self.notify_subscribers.connect(slot)
+        self.sig_notify_subscribers.connect(slot)
 
     def removeSusbcriber(self,slot):
         self.subscribers.remove(slot)
-        self.notify_subscribers.disconnect(slot)
+        self.sig_notify_subscribers.disconnect(slot)
 
     def receiveLedState(self, state):
         self.receive_led.setChecked(state)
