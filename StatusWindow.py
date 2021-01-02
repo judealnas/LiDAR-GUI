@@ -5,18 +5,21 @@ import os
 import time
 
 class StatusWindow(qtw.QPlainTextEdit):
-    # class constants
-    log_file = 'status_logs.txt'
-    log_path = os.path.join(os.path.dirname(__file__), log_file)
+    
     
     # class custom signal definitions
     sig_add_msg = qtc.pyqtSignal(str)
     sig_log_msg = qtc.pyqtSignal(str, str)
               
-    def __init__(self, *args, **kwargs):
+    def __init__(self,path='status_logs.txt', *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setTextInteractionFlags(qtc.Qt.NoTextInteraction)  
+        self.log_file = path
+        if os.path.isabs(path):
+            self.log_path = path
+        else:
+            self.log_path = os.path.join(os.path.dirname(__file__), self.log_file)
         self.initLog(self.log_path)
+        self.setTextInteractionFlags(qtc.Qt.NoTextInteraction)  
 
         # connect signals
         self.sig_add_msg.connect(self.addMsg)
