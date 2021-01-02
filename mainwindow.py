@@ -34,6 +34,11 @@ class MainWindow(qtw.QMainWindow):
         self.central_widget.setLayout(self.grid)
         self.setCentralWidget(self.central_widget)
 
+        ## connect signals
+        self.tcp_control.sig_notify_subscribers.connect(self.lidar_plot.updateData)
+        self.tcp_control.sig_log_event.connect(self.status_window.addMsg)
+        self.lidar_plot.sig_log_event.connect(self.status_window.addMsg)
+
         
         
 def main():

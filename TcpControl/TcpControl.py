@@ -9,9 +9,10 @@ import random
 from enum import Enum, auto
 
 Ui_TcpControl, baseClass = uic.loadUiType(join(dirname(__file__),'Ui_TcpControl.ui'))
+log_event_string = "{}::".format(__name__)
 
 class TcpControl(baseClass, Ui_TcpControl):
-
+    
     sig_notify_subscribers = qtc.pyqtSignal(qtc.QByteArray)
     sig_log_event = qtc.pyqtSignal(str)
     
@@ -27,7 +28,7 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.dis_conn_button.released.connect(self.connectSocket)
         #self.socket.connected.connect(lambda: print("Connected!"))
         #self.socket.disconnected.connect(lambda: print("Disconnected!"))
-        self.socket.readyRead.connect(self.readData)
+        self.socket.readyRead.connect(self.readSocket)
 
         #self.show()
 
@@ -39,7 +40,7 @@ class TcpControl(baseClass, Ui_TcpControl):
         if address_text.lower() == 'localhost':
             self.address = QHostAddress(QHostAddress.LocalHost)
         else:
-            self.address = QHostAddress(address_text)
+            self.address = QHostAddress(address_text).to
         
         #save port
         self.port = int(self.port_lineedit.text())
@@ -49,15 +50,18 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.dis_conn_button.setEnabled(False)
         if (self.socket.waitForConnected(timeout_ms)): #BLOCKING
             print("Connected")
+            self.sig_log_event.emit(log_event_string+f"addSubsrciber::connected to {self.address.toIPv4Address}:{self.port}")
             self.panelConnected(True)
         else:
             print("Failed to Connect!", self.socket.error())
+            self.sig_log_event.emit(log_event_string+f"connectSocket::failed to connect with {self.socket.error()}")
+
         self.dis_conn_button.setEnabled(True)
     
     def disconnectSocket(self):
         self.socket.disconnectFromHost()
+        self.sig_log_event.emit(log_event_string+"disconnectSocket::disconnected socket")
         self.panelConnected(False)
-        print("Disconnected from host!")
         
     def panelConnected(self, state):
         '''
@@ -83,20 +87,26 @@ class TcpControl(baseClass, Ui_TcpControl):
 
         # rewire signals
         self.dis_conn_button.disconnect()
-        self.dis_conn_button.released.connect(callback)     
+        self.dis_conn_button.released.connect(callback)
 
-    def readData(self):
+        self.sig_log_event.emit(log_event_string+"panelConnected::entered state {}".format(str(state)))
+
+
+    def readSocket(self):
         self.receiveLedState(True)
         data_in = self.socket.readAll()
+        self.sig_log_event.emit(log_event_string+"readSocket::received {}".format(str(data_in)))
         self.sig_notify_subscribers.emit(data_in)
         self.receiveLedState(False)
     
     def addSubscriber(self, slot):
         self.subscribers.append(slot)
+        self.sig_log_event.emit(log_event_string+"addSubsrciber::slot {} included".format(str(slot)))
         self.sig_notify_subscribers.connect(slot)
 
     def removeSusbcriber(self,slot):
         self.subscribers.remove(slot)
+        self.sig_log_event.emit(log_event_string+"addSubsrciber::slot {} removed".format(str(slot)))
         self.sig_notify_subscribers.disconnect(slot)
 
     def receiveLedState(self, state):

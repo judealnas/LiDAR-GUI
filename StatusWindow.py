@@ -1,12 +1,12 @@
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
+from PyQt5 import QtGui as qtg
 import sys
 import os
 import time
 
 class StatusWindow(qtw.QPlainTextEdit):
-    
-    
+
     # class custom signal definitions
     sig_add_msg = qtc.pyqtSignal(str)
     sig_log_msg = qtc.pyqtSignal(str, str)
@@ -19,19 +19,25 @@ class StatusWindow(qtw.QPlainTextEdit):
         else:
             self.log_path = os.path.join(os.path.dirname(__file__), self.log_file)
         self.initLog(self.log_path)
-        self.setTextInteractionFlags(qtc.Qt.NoTextInteraction)  
-
+        self.setReadOnly(True) 
+    
         # connect signals
         self.sig_add_msg.connect(self.addMsg)
         self.sig_log_msg.connect(self.logMsg)
 
-   
+    def createStandardContextMenu(self, pos):
+        '''
+        reimplimentation
+        '''
+        old_menu = super().createStandardContextMenu(pos)
+        return old_menu
+
     @qtc.pyqtSlot(qtc.QByteArray)
     def receiveData(self, qdata):
         '''
         Slot used to receive data from external modules
         '''
-        data = str(float(qdata))
+        data = str(qdata)
         self.sig_add_msg.emit(data)
 
     def addMsg(self,text):
@@ -41,6 +47,7 @@ class StatusWindow(qtw.QPlainTextEdit):
         timestr = time.strftime("%c >> ")
         new_string = timestr + text
         self.appendPlainText(new_string)
+        self.moveCursor(qtg.QTextCursor.End)
         
         # automatically log any message added to window
         self.sig_log_msg.emit(new_string, self.log_path)

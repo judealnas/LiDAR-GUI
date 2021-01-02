@@ -11,7 +11,6 @@ from enum import Enum, auto
 class LidarPlot(qtw.QWidget):
     
     sig_log_event = qtc.pyqtSignal(str)
-    
 
     def __init__(self,*args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -45,7 +44,7 @@ class LidarPlot(qtw.QWidget):
         self.buffer = []
         self.plot_buffer = self.buffer.copy()
         self.plot_mode = LidarPlotMode.SCROLLING
-        self.data_curve = self.plot_widget.plot()
+        self.data_curve = self.plot_widget.plot()   # create data curve object
 
         ## Connecting signals
         self.pause_button.released.connect(self.updateData)
@@ -61,13 +60,13 @@ class LidarPlot(qtw.QWidget):
     def plotData(self):
         self.data_curve.setData(self.x, self.buffer)
     
-    def updateData(self):
-        y = random.random()*5
-        self.buffer.append(y)
+    def updateData(self, y):
+        #y = random.random()*5
+        self.buffer.append(float(y))
         if (len(self.buffer) >= self.buffer_size) and self.plot_mode == LidarPlotMode.SCROLLING:
             self.buffer.pop(0)
             self.x[:-1] = self.x[1:] #rotate values left
-            self.x[-1] = (self.x[-1] + 0.9) #add new larger value
+            self.x[-1] = (self.x[-1] + 1) #add new larger value
         else:
             self.x = list(range(len(self.buffer)))
 
