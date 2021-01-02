@@ -13,7 +13,7 @@ log_event_string = "{}::".format(__name__)
 
 class TcpControl(baseClass, Ui_TcpControl):
     
-    sig_notify_subscribers = qtc.pyqtSignal(qtc.QByteArray)
+    sig_broadcast_data = qtc.pyqtSignal(qtc.QByteArray)
     sig_log_event = qtc.pyqtSignal(str)
     
     def __init__(self, *args, **kwargs):
@@ -96,19 +96,9 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.receiveLedState(True)
         data_in = self.socket.readAll()
         self.sig_log_event.emit(log_event_string+"readSocket::received {}".format(str(data_in)))
-        self.sig_notify_subscribers.emit(data_in)
+        self.sig_broadcast_data.emit(data_in)
         self.receiveLedState(False)
     
-    def addSubscriber(self, slot):
-        self.subscribers.append(slot)
-        self.sig_log_event.emit(log_event_string+"addSubsrciber::slot {} included".format(str(slot)))
-        self.sig_notify_subscribers.connect(slot)
-
-    def removeSusbcriber(self,slot):
-        self.subscribers.remove(slot)
-        self.sig_log_event.emit(log_event_string+"addSubsrciber::slot {} removed".format(str(slot)))
-        self.sig_notify_subscribers.disconnect(slot)
-
     def receiveLedState(self, state):
         self.receive_led.setChecked(state)
     
