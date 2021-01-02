@@ -302,3 +302,22 @@ Fri 01 Jan 2021 10:59:00 PM CST >> TcpControl::readData::received b'0.422618  '
 Fri 01 Jan 2021 10:59:00 PM CST >> TcpControl::readData::received b'0.500000  '
 Fri 01 Jan 2021 10:59:01 PM CST >> TcpControl::readData::received b'0.573576  '
 Fri 01 Jan 2021 10:59:01 PM CST >> TcpControl::panelConnected::entered state False
+----------
+----------
+----------
+Fri 01 Jan 2021 11:51:00 PM CST >> TcpControl::addSubsrciber::connected to <built-in method toIPv4Address of QHostAddress object at 0x7f93b044ff20>:49417
+Fri 01 Jan 2021 11:51:00 PM CST >> TcpControl::panelConnected::entered state True
+Fri 01 Jan 2021 11:51:00 PM CST >> TcpControl::readSocket::received b'0.000000  '
+Fri 01 Jan 2021 11:51:01 PM CST >> TcpControl::readSocket::received b'0.087156  '
+Fri 01 Jan 2021 11:51:01 PM CST >> TcpControl::readSocket::received b'0.173648  '
+Fri 01 Jan 2021 11:51:02 PM CST >> TcpControl::disconnectSocket::disconnected socket
+Fri 01 Jan 2021 11:51:02 PM CST >> TcpControl::panelConnected::entered state False
+----------
+Fri 01 Jan 2021 11:51:46 PM CST >> TcpControl::addSubsrciber::connected to <built-in method toIPv4Address of QHostAddress object at 0x7f26f76dcc80>:49417
+Fri 01 Jan 2021 11:51:46 PM CST >> TcpControl::panelConnected::entered state True
+Fri 01 Jan 2021 11:51:46 PM CST >> TcpControl::readSocket::received b'0.000000  '
+Fri 01 Jan 2021 11:51:46 PM CST >> TcpControl::readSocket::received b'0.087156  '
+Fri 01 Jan 2021 11:51:47 PM CST >> TcpControl::readSocket::received b'0.173648  '
+Fri 01 Jan 2021 11:51:47 PM CST >> TcpControl::readSocket::received b'0.258819  '
+Fri 01 Jan 2021 11:51:47 PM CST >> TcpControl::disconnectSocket::disconnected socket
+Fri 01 Jan 2021 11:51:47 PM CST >> TcpControl::panelConnected::entered state False

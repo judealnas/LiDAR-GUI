@@ -25,12 +25,18 @@ class StatusWindow(qtw.QPlainTextEdit):
         self.sig_add_msg.connect(self.addMsg)
         self.sig_log_msg.connect(self.logMsg)
 
-    def createStandardContextMenu(self, pos):
+    def contextMenuEvent(self, event):
         '''
         reimplimentation
         '''
-        old_menu = super().createStandardContextMenu(pos)
-        return old_menu
+        event2 = qtc.QEvent(event)
+        menu = self.createStandardContextMenu()
+        action_clear = qtw.QAction("Clear",self)
+        action_clear.triggered.connect(self.clear)
+        action_recent = qtw.QAction("View Recent", self)
+
+        menu.addAction(action_clear)
+        menu.exec_(event.globalPos())
 
     @qtc.pyqtSlot(qtc.QByteArray)
     def receiveData(self, qdata):
