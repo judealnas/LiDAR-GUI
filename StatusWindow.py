@@ -20,23 +20,39 @@ class StatusWindow(qtw.QPlainTextEdit):
             self.log_path = os.path.join(os.path.dirname(__file__), self.log_file)
         self.initLog(self.log_path)
         self.setReadOnly(True) 
-    
+        self.view_recent = True
         # connect signals
         self.sig_add_msg.connect(self.addMsg)
         self.sig_log_msg.connect(self.logMsg)
 
     def contextMenuEvent(self, event):
         '''
-        reimplimentation
+        Re-implementation to add actions to default context menu
         '''
-        event2 = qtc.QEvent(event)
+        # get default menu
         menu = self.createStandardContextMenu()
+        
+        # construct clear action
         action_clear = qtw.QAction("Clear",self)
         action_clear.triggered.connect(self.clear)
+
+        # construct 'View Recent' Action
         action_recent = qtw.QAction("View Recent", self)
+        action_recent.triggered.connect(lambda: self.setViewRecent(True))
 
         menu.addAction(action_clear)
+        menu.addAction(action_recent)
         menu.exec_(event.globalPos())
+    
+    def scrollContentsBy(self, *args, **kwargs):
+        '''
+        Re-implementation to set disable viewing of recent status updates when user scrolls
+        '''
+        super().scrollContentsBy(*args, **kwargs)
+        self.setViewRecent(False)
+
+    def setViewRecent(self, val):
+        self.view_recent = val
 
     @qtc.pyqtSlot(qtc.QByteArray)
     def receiveData(self, qdata):
@@ -53,7 +69,8 @@ class StatusWindow(qtw.QPlainTextEdit):
         timestr = time.strftime("%c >> ")
         new_string = timestr + text
         self.appendPlainText(new_string)
-        self.moveCursor(qtg.QTextCursor.End)
+        if self.view_recent:
+            self.moveCursor(qtg.QTextCursor.End)
         
         # automatically log any message added to window
         self.sig_log_msg.emit(new_string, self.log_path)
