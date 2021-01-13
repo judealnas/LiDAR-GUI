@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <string.h>
+#include <pthread.h>
 
 #define PI 3.14159265
 
@@ -15,13 +17,59 @@
 
 #define HEADERSIZE 10
 #define PORT 49417
+#define TIME_STR_SIZE 27 //YYYY-mm-DD-HH-MM-SS-uuuuuu\0
 
-int main() {
+size_t getTimeString(char* str_result, size_t str_size, char delim) 
+{	/**
+	Returns the current time (UTC) as a string of format
+	YYYY-mm-dd-HH-MM-SS-UUUUUU where mm is the month number and UUUUUU are the microseconds of the epoch time
+	**/
+
+	struct timeval curr_time_tv;
+	char time_str[str_size];
+	char out_str[str_size];
+	
+	//get current time; tv provides sec and usec; tm used for strftime
+	gettimeofday(&curr_time_tv, NULL); //get current time in timeval
+	struct tm *curr_time_tm = gmtime(&(curr_time_tv.tv_sec)); //use sec of timeval to get struct tm
+
+	//use tm to get timestamp string
+	strftime(time_str, str_size, "%Y-%m-%d-%H-%M-%S",curr_time_tm);
+	size_t true_size = snprintf(str_result, str_size, "%s-%06ld",time_str, curr_time_tv.tv_usec); //add microseconds fixed to 6-character width left-padded with zeroes
+    
+	//str_size is characters to write INCLUDING null terminator; if true_size == str_size, then resulting string was truncated; 
+	//max of (str_size - 1) can be written
+	if (true_size == str_size) true_size = str_size - 1; 
+    
+	//replace default '-' delimiter if needed
+    if (delim != '-') 
+	{
+        char* ptr_found; //pointer to found substring
+        while (1) 
+		{
+            ptr_found = strstr(str_result,"-"); //find substring
+            if (ptr_found == NULL) 
+			{
+                break; //if NULL, then no occurences of "-" so done
+            }
+            else 
+			{
+                *ptr_found = delim; //otw replace found '-' with desired delimiter
+            }
+        }    
+    }
+    
+    return true_size;
+}
+
+int main() 
+{
 	char server_message[50] = "You have reached the server!";
-
+	
 	// create the server socket
 	int server_socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (server_socket  < 0) {
+	if (server_socket  < 0) 
+	{
 		perror("socket() call failed!");
 		exit(1);
 	}
@@ -33,23 +81,27 @@ int main() {
 	server_address.sin_addr.s_addr = INADDR_ANY; //localhost
 
 	// bind server socket to the address
-	if (bind(server_socket, (struct sockaddr*) &server_address, sizeof(server_address)) < 0) {
+	if (bind(server_socket, (struct sockaddr*) &server_address, sizeof(server_address)) < 0) 
+	{
 		perror("bind() call failed!");
 		exit(1);
 	}
 	
 	
-	if (listen(server_socket, 5) < 0) {
+	if (listen(server_socket, 5) < 0) 
+	{
 		perror("listen() failed!");
 		exit(1);
 	}
 	
-	while (1) { //loop to discard dead clients and wait for a reconnection
+	while (1)  //loop to discard dead clients and wait for a reconnection 
+	{
 		printf("Waiting for client connection...\n");
 
 		int client_socket;
 		client_socket = accept(server_socket, NULL, NULL);
-		if (client_socket < 0) {
+		if (client_socket < 0) 
+		{
 			perror("accept() failed");
 			exit(1);
 		}
@@ -59,50 +111,53 @@ int main() {
 		setsockopt(client_socket, SOL_SOCKET, SO_KEEPALIVE,&val, sizeof(val));
 		
 		printf("Connection established\n");
-		
-		struct timeval *date;
-		struct tm *timestamp;
+			
+		char time_str[TIME_STR_SIZE];
 		uint8_t loop_stop = 0;
 		int i = 0;
-		useconds_t delay = 500000; //500 ms
+		useconds_t delay = 50000; //50 ms
 		printf("Entering loop...\n");
 		while (!loop_stop)
 		{
-			double x;
-			//char *payload;
-			//payload = (double *) malloc(sizeof(char)*HEADERSIZE);
-			char msg[10];
-			char header[HEADERSIZE];
-			//gettimeofday(date);
-			//time_t *seconds = date->tv_sec;
-			//long int usecs = date->tv_usec;
-			//timestamp = gmtime(seconds); //get seconds from epoch
-			//payload[0] = timestamp->tm_mon; 
-			//payload[1] = timestamp->tm_mday;
-			//payload[2] = timestamp->tm_hour;
-			//payload[3] = timestamp->tm_min;
-			//payload[4] = timestamp->tm_sec;
-			//payload[5] = usecs;
+			//getTimeString(time_str, TIME_STR_SIZE, '_');
 			
+			//Transmitting epoch time instead
+			struct timeval curr_time_tv; 
+			gettimeofday(&curr_time_tv,NULL);
+			sprintf
+			(
+				time_str,"%lu\.%06lu", curr_time_tv.tv_sec, curr_time_tv.tv_usec
+			);
+			
+			double x;
 			x = sin(i*PI/180.0);
-			//payload[6] = x;
-			sprintf(msg,"%-*f",HEADERSIZE, x);
 
-			ssize_t send_status = send(client_socket, msg, sizeof(msg), MSG_NOSIGNAL);
-			if (send_status >= 0) {
-				if(send_status < HEADERSIZE) {
+			size_t msg_size = HEADERSIZE + 1 + TIME_STR_SIZE; 
+			char msg[msg_size];
+			sprintf(msg,"%0*g_%s",HEADERSIZE, x, time_str);
+			msg_size = strlen(msg);
+
+			//send (msg_size - 1) bytes to omit string termination
+			ssize_t send_status = send(client_socket, msg, msg_size, MSG_NOSIGNAL);
+			if (send_status >= 0) 
+			{
+				if(send_status < msg_size) 
+				{
 					printf("Not all data sent\n");
 				}
-				else {
-					printf("Message sent\n");
+				else 
+				{
+					printf("Message sent: %s\n",msg);
 				}
 			}
-			else if (errno == EPIPE) {
+			else if (errno == EPIPE) 
+			{
 				printf("sending on dead socket. Breaking from loop.\n");
 				close(client_socket);
 				break;
 			}
-			else {
+			else 
+			{
 				perror("Error in send(): ");
 				break;
 			}

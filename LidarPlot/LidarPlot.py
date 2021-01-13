@@ -4,6 +4,8 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 import random
 from enum import Enum, auto
+import time
+import math
 
 #Ui_LidarPlot, baseClass = uic.loadUiType('Ui_LidarPlot.ui')
 #ui_builder = Ui_LidarPlot()
@@ -60,31 +62,60 @@ class LidarPlot(qtw.QWidget):
     def plotData(self):
         self.data_curve.setData(self.x, self.buffer)
     
-    def updateData(self, y):
-        #y = random.random()*5
-        self.buffer.append(float(y))
+    def updateData(self, data: qtc.QByteArray):
+        y, epoch = self.parseData(data)
+        
+        self.buffer.append(y)
+        self.x.append(epoch)
         if (len(self.buffer) >= self.buffer_size) and self.plot_mode == LidarPlotMode.SCROLLING:
             self.buffer.pop(0)
-            self.x[:-1] = self.x[1:] #rotate values left
-            self.x[-1] = (self.x[-1] + 1) #add new larger value
+            self.x.pop(0)
+            #self.x[:-1] = self.x[1:] #rotate values left
+            #self.x[-1] = (self.x[-1] + 1) #add new larger value
         else:
-            self.x = list(range(len(self.buffer)))
+            pass
+            #non-scrolling or insufficient data points for scrolling
+            #self.x = list(range(len(self.buffer)))
 
         self.plotData()
+
+    def parseData(self, data: qtc.QByteArray):
+        '''
+        Parses a QByteArray expecting the following format:
+
+        [10-width numeric]_[4-digit year]_[2-digit numeric month]_[2-digit numeric day]_[2-digit hour]_[2-digit minute]
+        _[2-digit second]_[6-digit microsecond]
+        '''
+        # decode data from bytes into string
+        data_str = data.data().decode('utf-8')
+        
+        data_list = data_str.split('_')
+        num = float(data_list[0])
+        epoch = float(data_list[1])
+        print(num, epoch)
+
+        return num, epoch
 
     def clearData(self):
         self.buffer = []
         self.x = []
         self.plotData()
 
-t = qtc.QTime(0,0)
 class TimestampAxisItem(pg.AxisItem):
     def __init__(self,*args, **kwargs):
         super().__init__(*args,**kwargs)
 
     def tickStrings(self, values, scale, spacing):
+        vs = [v*scale for v in values]
+        tick_str = []
+        for v in vs:
+            l = str(v).split('.')
+            out = time.strftime("%Y %b %d\n%H:%M:%S", time.gmtime(int(l[0])))
+            out += "." + l[1]
+            tick_str.append(out)
         
-        return [t.addSecs(v).toString('mm:ss') for v in values ]
+        return tick_str
+            
 
 class LidarPlotMode(Enum):
     SCROLLING = auto()  # 1
