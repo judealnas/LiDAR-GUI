@@ -53,6 +53,9 @@ class StatusWindow(qtw.QPlainTextEdit):
 
     def setViewRecent(self, val):
         self.view_recent = val
+        if val:
+            self.moveCursor(qtg.QTextCursor.End)
+
 
     @qtc.pyqtSlot(qtc.QByteArray)
     def receiveData(self, qdata):
