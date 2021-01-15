@@ -40,7 +40,7 @@ class TcpControl(baseClass, Ui_TcpControl):
         if address_text.lower() == 'localhost':
             self.address = QHostAddress(QHostAddress.LocalHost)
         else:
-            self.address = QHostAddress(address_text).to
+            self.address = QHostAddress(address_text)
         
         #save port
         self.port = int(self.port_lineedit.text())
@@ -93,11 +93,10 @@ class TcpControl(baseClass, Ui_TcpControl):
 
 
     def readSocket(self):
-        self.receiveLedState(True)
+        self.receive_led.toggle()
         data_in = self.socket.readAll()
         self.sig_log_event.emit(log_event_string+"readSocket::received {}".format(str(data_in)))
         self.sig_broadcast_data.emit(data_in)
-        self.receiveLedState(False)
     
     def receiveLedState(self, state):
         self.receive_led.setChecked(state)
@@ -120,7 +119,6 @@ if __name__ == "__main__":
             self.Msg = MsgWindow()
             self.Msg.show()
 
-            self.Tcp.addSubscriber(self.Msg.receiveData)
     
     app = Manager(sys.argv)
     sys.exit(app.exec_())
