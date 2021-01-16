@@ -83,8 +83,7 @@ class LidarPlot(qtw.QWidget):
         '''
         Parses a QByteArray expecting the following format:
 
-        [10-width numeric]_[4-digit year]_[2-digit numeric month]_[2-digit numeric day]_[2-digit hour]_[2-digit minute]
-        _[2-digit second]_[6-digit microsecond]
+        [numeric data]_[epoch timestamp]
         '''
         # decode data from bytes into string
         data_str = data.data().decode('utf-8')
@@ -100,6 +99,9 @@ class LidarPlot(qtw.QWidget):
         self.buffer = []
         self.x = []
         self.plotData()
+
+    def getLogSignal(self):
+        return self.sig_log_event
 
 class TimestampAxisItem(pg.AxisItem):
     def __init__(self,*args, **kwargs):
