@@ -66,7 +66,7 @@ int main()
 {
 	char server_message[50] = "You have reached the server!";
 	
-	// create the server socket
+	// create the listening server socket
 	int server_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_socket  < 0) 
 	{
@@ -78,7 +78,7 @@ int main()
 	struct sockaddr_in server_address;
 	server_address.sin_family = AF_INET; //TCP
 	server_address.sin_port = htons(PORT); //define port
-	server_address.sin_addr.s_addr = INADDR_ANY; //localhost
+	server_address.sin_addr.s_addr = INADDR_ANY; //accept connection at any address available
 
 	// bind server socket to the address
 	if (bind(server_socket, (struct sockaddr*) &server_address, sizeof(server_address)) < 0) 
@@ -115,7 +115,7 @@ int main()
 		char time_str[TIME_STR_SIZE];
 		uint8_t loop_stop = 0;
 		int i = 0;
-		useconds_t delay = 50000; //50 ms
+		useconds_t delay =100000; //100 ms
 		printf("Entering loop...\n");
 		while (!loop_stop)
 		{
