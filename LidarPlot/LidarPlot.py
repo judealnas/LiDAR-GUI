@@ -100,6 +100,9 @@ class LidarPlot(qtw.QWidget):
         self.x = []
         self.plotData()
 
+    def getLogSignal(self):
+        return self.sig_log_event
+
 class TimestampAxisItem(pg.AxisItem):
     def __init__(self,*args, **kwargs):
         super().__init__(*args,**kwargs)

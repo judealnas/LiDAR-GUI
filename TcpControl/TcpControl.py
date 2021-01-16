@@ -103,6 +103,12 @@ class TcpControl(baseClass, Ui_TcpControl):
     
     def sendLedState(self, state):
         self.send_led.setChecked(state)
+    
+    def getLogSignal(self):
+        return self.sig_log_event
+    
+    def getBroadcastSignal(self):
+        return self.sig_broadcast_data
 
 
 
