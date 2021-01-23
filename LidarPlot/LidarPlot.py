@@ -1,11 +1,12 @@
 import sys
+import os
 import pyqtgraph as pg
-from PyQt5 import QtCore as qtc
-from PyQt5 import QtWidgets as qtw
+from PyQt5 import QtCore as qtc, QtWidgets as qtw
 import random
 from enum import Enum, auto
 import time
 import math
+import re
 
 #Ui_LidarPlot, baseClass = uic.loadUiType('Ui_LidarPlot.ui')
 #ui_builder = Ui_LidarPlot()
@@ -29,7 +30,7 @@ class LidarPlot(qtw.QWidget):
         # add plot widget
         self.layout().addWidget(self.plot_widget)
         
-        # add horizonatl row of buttons
+        # add horizontal row of buttons
         self.button_layout = qtw.QHBoxLayout()
         buttons = [self.pause_button, self.clear_button, self.mode_button]
         for b in buttons:
@@ -37,7 +38,7 @@ class LidarPlot(qtw.QWidget):
         
         self.layout().addLayout(self.button_layout)
 
-        self.show()
+        #self.show()
         #############################
         
         ## Class instance variables
@@ -48,11 +49,32 @@ class LidarPlot(qtw.QWidget):
         self.plot_mode = LidarPlotMode.SCROLLING
         self.data_curve = self.plot_widget.plot()   # create data curve object
 
-        ## Connecting signals
+        ## Configure Data Log Path #################
+        now = time.gmtime()
+        self.data_file = time.strftime('%Y_%m_%d',now) + '_data_file.csv'
+        self.data_folder = os.path.dirname(__file__)
+        self.data_path = os.path.join(self.data_folder,self.data_file)
+        
+        num = 1
+        while (os.path.exists(self.data_path)):
+            self.data_file = time.strftime('%Y_%m_%d',now) + '_data_file ({}).csv'.format(num)
+            self.data_folder = os.path.dirname(__file__)
+            self.data_path = os.path.join(self.data_folder,self.data_file)
+
+            num += 1
+        os.makedirs(self.data_path)
+        ##############################
+
+        ## Instantiate logger object and threads
+        self.data_logger = LidarLogger()
+
+        #####################################
+        ## Connecting signals ###############################
         self.pause_button.released.connect(self.updateData)
         self.clear_button.released.connect(self.clearData)
         self.mode_button.released.connect(self.changeMode)
-        
+        ###################################################
+
     def changeMode(self):
         if self.plot_mode == LidarPlotMode.SCROLLING:
             self.plot_mode = LidarPlotMode.ALL
@@ -64,7 +86,8 @@ class LidarPlot(qtw.QWidget):
     
     def updateData(self, data: qtc.QByteArray):
         y, epoch = self.parseData(data)
-        
+        self.logData(y,epoch)
+
         self.buffer.append(y)
         self.x.append(epoch)
         if (len(self.buffer) >= self.buffer_size) and self.plot_mode == LidarPlotMode.SCROLLING:
@@ -103,6 +126,29 @@ class LidarPlot(qtw.QWidget):
     def getLogSignal(self):
         return self.sig_log_event
 
+class LidarLogger(qtc.QObject):
+    '''
+    Class responsible for logging all plotted data to CSV
+    '''
+    sig_return = qtc.pyqtSignal()
+
+        
+    default_file = 'data_file.csv'
+    default_folder = os.path.dirname(__file__)
+    default_path = os.path.join(self.default_folder, self.default_file)
+
+    def __init__(self,path=None,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        if path == None:
+            self.data_path = default_path
+            pass
+
+    def getReturnSig(self) -> qtc.pyqtSignal:
+        return self.sig_return
+
+
+
+
 class TimestampAxisItem(pg.AxisItem):
     def __init__(self,*args, **kwargs):
         super().__init__(*args,**kwargs)
@@ -118,7 +164,6 @@ class TimestampAxisItem(pg.AxisItem):
         
         return tick_str
             
-
 class LidarPlotMode(Enum):
     SCROLLING = auto()  # 1
     ALL = auto()        # 2
