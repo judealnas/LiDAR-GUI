@@ -13,6 +13,7 @@ class TcpControl(baseClass, Ui_TcpControl):
     sig_broadcast_data = qtc.pyqtSignal(qtc.QByteArray)
     sig_log_event = qtc.pyqtSignal(str)
     sig_relay_read = qtc.pyqtSignal(qtc.QByteArray)
+    sig_write_socket = qtc.pyqtSignal(str)
        
     def __init__(self, *args, **kwargs):
         super().__init__(*args,**kwargs)
@@ -51,7 +52,7 @@ class TcpControl(baseClass, Ui_TcpControl):
             self.socket_reader.moveToThread(self.socket_reader_thread)
             #connect socket reader signals
             self.socket.readyRead.connect(self.socket_reader.getReadSlot()) #When data available, call appropriate method in SocketReader object
-            self.socket_reader.getReturnSig().connect(self.relaySocketRead) #signal emitted when data is received
+            self.socket_reader.getReadReturnSig().connect(self.relaySocketRead) #signal emitted when data is received
         
             #instantiate socket writer and thread
             self.socket_writer = SocketWriter(self.socket)
@@ -59,8 +60,8 @@ class TcpControl(baseClass, Ui_TcpControl):
             self.socket_writer.moveToThread(self.socket_writer_thread)
 
             #connect socket writer signasl
-            self.socket_writer.getReturnSig().connect(self.relaySocketWrite)
-
+            self.socket_writer.getWriteReturnSig().connect(self.relaySocketWrite)
+            self.sig_write_socket.connect(self.socket_writer.getWriteSlot()) #connect signal to write method of SockeWriter
             #start threads
             self.socket_reader_thread.start()
             self.socket_writer_thread.start()
@@ -149,7 +150,7 @@ class SocketReader(qtc.QObject):
         self.sig_return.emit(data_in)
     
     ##Accessor functions for modularity
-    def getReturnSig(self):
+    def getReadReturnSig(self):
         return self.sig_return
 
     def getReadSlot(self):
@@ -169,13 +170,14 @@ class SocketWriter(qtc.QObject):
     
     def writeSocket(self,msg: str):
         '''
+        Encode a string as bytes and write to socket.
         TO-DO: depending on protocol, send message size first
         '''
         write_status = self.socket.write(bytes(msg,'utf-8'))
         self.sig_return.emit(write_status)
     
     ##Accessor functions for modularity
-    def getReturnSig(self):
+    def getWriteReturnSig(self):
         return self.sig_return
 
     def getWriteSlot(self):
