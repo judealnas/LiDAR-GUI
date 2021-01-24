@@ -1,5 +1,5 @@
 status_logs.txt
-__pycache__/StatusWindow.cpython-38.pyc
+__pycache__/
 status_logs.txt
 experiment.py
 *.pyc
