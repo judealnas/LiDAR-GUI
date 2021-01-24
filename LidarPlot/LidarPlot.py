@@ -70,9 +70,9 @@ class LidarPlot(qtw.QWidget):
         self.mode_button.released.connect(self.changeMode)
 
         #Thread signals
-        self.sig_read_first_n_lines.connect(self.data_logger.readFirstNLines)
-        self.sig_read_last_n_lines.connect(self.data_logger.readLastNLines)
-        self.sig_write_line.connect(self.data_logger.writeLine)
+        self.sig_read_first_n_lines.connect(self.data_logger.getReadFirstNSlot())
+        self.sig_read_last_n_lines.connect(self.data_logger.getReadLastNSlot())
+        self.sig_write_line.connect(self.data_logger.getWriteSlot())
         ###################################################
 
         #Allocate objects to threads and start
@@ -214,6 +214,15 @@ class LidarLogger(qtc.QObject):
 
     def getLogPath(self):
         return self.data_path
+    
+    def getWriteSlot(self):
+        return self.writeLine
+    
+    def getReadFirstNSlot(self):
+        return self.readFirstNLines
+    
+    def getReadLastNSlot(self):
+        return self.readLastNLines
     ##########################################
 
 class TimestampAxisItem(pg.AxisItem):
