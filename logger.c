@@ -1,8 +1,19 @@
 #include <logger.h>
+#include <stdio.h>
+#include <string.h>
 
-//logger buffer functions
-logger_buff_t loggerBufferInit(uint16_t buff_size) {
-    return;
+//logging logic functions
+
+//logger buffer logic functions
+logger_buff_t loggerBufferInit(uint16_t max_size) {
+    logger_buff_t buffer;
+    pthread_mutex_init(&buffer.lock, NULL);
+    pthread_cond_init(&buffer.cond, NULL);
+    buffer.max_buff_size = max_size;
+    buffer.head = NULL;
+    buffer.tail = NULL;
+
+    return buffer;
 }
 
 void push(logger_buff_t *buffer, logger_buff_node_t *node) {
@@ -50,4 +61,5 @@ int logMsg(logger_t* logger, char* msg, uint16_t msg_size, char* abs_path) {
     logger_buff_node_t* logger_node = (logger_buff_node_t*) calloc(sizeof(logger_buff_node_t)); //memcheck 3
     logger_node->msg = logger_msg;
 
+    //try and push to buffer; return depends on buffer capacity
 }   
