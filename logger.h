@@ -3,7 +3,6 @@
 #include <stdbool.h>
 
 typedef enum LoggerCommand {
-    INIT,
     LOG,
     CLOSE
 } logger_cmd_t;
