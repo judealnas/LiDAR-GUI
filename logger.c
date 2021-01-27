@@ -98,16 +98,21 @@ int push(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_priority, 
     return 0;
 }
 
-logger_buff_node_t* pull(logger_buff_t* buffer) {
-/** Returns pointer to last element in list. **/
-    logger_buff_node_t *out;   
+logger_msg_t pull(logger_buff_t* buffer) {
+/** Returns last element in list. Corresponding address is freed after pull.
+ * To disable memory freeing, remove lines associated with the "trash" variable. 
+ * Change "out" to pointer for performance improvements **/
+    logger_msg_t out;   
+    logger_buff_node_t* trash;   
 
     pthread_mutex_lock(&buffer->lock);
     if (buffer->occupancy <= 0) {
         pthread_cond_wait(&buffer->cond_nonempty, &buffer->lock);
     } //if the buffer is empty, block until the cond_nonempty signal to continue
     
-    out = buffer->tail; //save output address
+    out = *buffer->tail; //save output value
+    trash = buffer->tail; //save address of just-pulled msg to free later
+
     if (buffer->tail->prev == NULL) {
         buffer->tail == NULL;
         buffer->head == NULL;
@@ -122,6 +127,7 @@ logger_buff_node_t* pull(logger_buff_t* buffer) {
     pthread_mutex_unlock(&buffer->lock); //IMPORTANT: Unlock mutex before signaling so waiting threads can acquire lock
     pthread_cond_signal(&buffer->cond_nonfull);
 
+    loggerMsgNodeDestroy(trash); //takeout the trash :-)
     return out;
 }
 
@@ -204,7 +210,7 @@ int logStatus(logger_t logger, char* msg, uint16_t msg_size) {
 }
 void loggerClose(logger_t* logger) {}
 void loggerPriorityClose() {}
-int logMsg(logger_t* logger, char* msg, uint16_t msg_size, char* abs_path) {
+int logMsg(logger_t* logger, char* msg, uint16_t msg_size, char* path, uint16_t path_size) {
     //Build logger message
     logger_msg_t logger_msg;
     logger_msg.cmd = LOG;
