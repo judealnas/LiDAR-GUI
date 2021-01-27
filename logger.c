@@ -135,7 +135,7 @@ void flush(logger_buff_t* buffer) {
     /** Destroys all messages currently in the buffer **/
     pthread_mutex_lock(&buffer->lock);
     if (buffer->occupancy <= 0) return;
-    
+
     logger_buff_node_t* p = buffer->head;
     logger_buff_node_t* p_tmp;
     while (p != NULL) {
