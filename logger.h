@@ -37,9 +37,8 @@ typedef struct Logger {
 
 //linked list buffer functions
 logger_buff_t loggerBufferInit(uint16_t);
-void push(logger_buff_t *, logger_buff_node_t *);
-void pushPriority(logger_buff_t *, logger_buff_node_t *);
-logger_buff_node_t* pop(logger_buff_t *buffer);
+void push(logger_buff_t *, logger_buff_node_t *, bool , bool);
+logger_buff_node_t* pull(logger_buff_t* );
 void flush(logger_buff_t *buffer);
 
 //logger logic
