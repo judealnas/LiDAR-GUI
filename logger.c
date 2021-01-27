@@ -6,6 +6,32 @@
 #include <time.h>
 
 //logging logic functions
+logger_buff_node_t* loggerMsgNodeCreate(logger_cmd_t cmd, char* path, char* data, uint16_t data_size) {
+    /** Given message parameters, first constructs a LoggerMessage structure followed by
+     * a Logger Buffer Node structure **/
+
+    //Building message on local heap
+    logger_msg_t msg;
+    msg.abs_path = strdup(path); //strdup allocates memory that must be freed
+    msg.data = strdup(data); //strdup allocates memory that must be freed
+    msg.data_leng = data_size;
+
+    //copy msg data by-value into memory allocated for buffer node
+    logger_buff_node_t* node = (logger_buff_node_t*) malloc(2*sizeof(logger_buff_node_t) + sizeof(msg));
+    node->msg = msg;
+    
+    return node;
+}
+
+void loggerMsgNodeDestroy(logger_buff_node_t* node) {
+    /** Destroys a buffer node and the encapsulated message **/
+    if (node != NULL) {
+        free(node->msg.abs_path);
+        free(node->msg.data);
+        free(node);
+    }
+    return;
+}
 
 //logger buffer logic functions
 logger_buff_t* loggerBufferInit(uint16_t max_size) {
