@@ -51,8 +51,6 @@ int loggerBufferDestroy(logger_buff_t* buffer) {
     pthread_cond_destroy(&buffer->cond_nonfull);
     pthread_cond_destroy(&buffer->cond_nonempty);
     pthread_mutex_destroy(&buffer->lock);
-
-    
 }
 int push(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_priority, bool blocking) {
     /** Add a node to the linked list buffer. If hi_priority is true, new_node is added at the tail of buffer. 
@@ -178,15 +176,16 @@ int loggerMain(logger_t* logger) {
 }
 
 //High level interface functions
-void loggerInit(logger_t* logger, uint16_t buffer_size) {
+int loggerInit(logger_t* logger, uint16_t buffer_size) {
     /**Returns a configured logger struct to the buffer pointed to by logger
-     * Calls buffer initialization and create a log file for status reports **/
+     * Calls buffer initialization and create a log file for status reports.
+     * Use as parameter to pthreads_create for threaded logging **/
     
     //stat log initialization////////////////////////////
     char *stat_log_stem = "/logger_logs.txt"; //WARNING: ASSUME UNIX PATH SEPARATOER
     char *stat_log_root = "./logs";
     mkdir(stat_log_root, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); 
-    logger->stat_log_path = (char*) malloc(strlen(stat_log_root)+strlen(stat_log_stem)+); //MEMCHECK 4
+    logger->stat_log_path = (char*) malloc(strlen(stat_log_root)+strlen(stat_log_stem)); //MEMCHECK 4
     if (logger->stat_log_path == NULL) {
         printf("ERROR ALLOCATING MEMORY STAT LOG PATH IN LOGGER INITIALIZATION");
     }
@@ -207,24 +206,27 @@ void loggerInit(logger_t* logger, uint16_t buffer_size) {
 
     //Buffer initialization
     logger->buffer = loggerBufferInit(buffer_size);
+
+    return loggerMain(logger);
 }
 
-int logStatus(logger_t logger, char* msg, uint16_t msg_size) {
+int loggerDestroy(logger_t* logger) {
+    loggerBufferDestroy(logger->buffer);
+    int f_status = fclose(logger->stat_log_file);
 
+    return f_status;
 }
-void loggerClose(logger_t* logger) {}
-void loggerPriorityClose() {}
+
+int logStatus(logger_t* logger, char* msg) {
+    /** Utility function for internal status logging **/
+    return fprintf(logger->stat_log_file,"%s",msg);
+}
+
+void loggerClose(logger_t* logger, bool hi_priority, bool blocking) {
+    loggerMsgNodeCreate(CLOSE,NULL,NULL,0);
+    push(logger->buffer,loggerMsgNodeCreate(CLOSE,NULL,NULL,0),hi_priority, blocking);
+    return;
+}
+
 int logMsg(logger_t* logger, char* msg, uint16_t msg_size, char* path, uint16_t path_size) {
-    //Build logger message
-    logger_msg_t logger_msg;
-    logger_msg.cmd = LOG;
-    logger_msg.abs_path = strdup(abs_path); //memcheck 1
-    logger_msg.data = strdup(msg); //memcheck 2
-    logger_msg.data_size = msg_size;
-    
-    //allocate buffer node and copy msg
-    logger_buff_node_t* logger_node = (logger_buff_node_t*) calloc(sizeof(logger_buff_node_t)); //memcheck 3
-    logger_node->msg = logger_msg;
-
-    //try and push to buffer; return depends on buffer capacity
 }   
