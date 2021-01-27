@@ -9,8 +9,8 @@ typedef enum LoggerCommand {
 
 typedef struct LoggerMessage {
     logger_cmd_t cmd;
-    uint16_t path_size;
-    uint16_t data_size;
+    uint16_t path_leng;
+    uint16_t data_leng;
     char *abs_path;
     char *data;
 } logger_msg_t;
