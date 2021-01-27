@@ -98,20 +98,16 @@ int push(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_priority, 
     return 0;
 }
 
-logger_msg_t pull(logger_buff_t* buffer) {
-/** Returns last element in list. Corresponding address is freed after pull.
- * To disable memory freeing, remove lines associated with the "trash" variable. 
- * Change "out" to pointer for performance improvements **/
-    logger_msg_t out;   
-    logger_buff_node_t* trash;   
+logger_buff_node_t* pull(logger_buff_t* buffer) {
+/** Returns pointer to last node in list. **/
+    logger_buff_node_t* out;   
 
     pthread_mutex_lock(&buffer->lock);
     if (buffer->occupancy <= 0) {
         pthread_cond_wait(&buffer->cond_nonempty, &buffer->lock);
     } //if the buffer is empty, block until the cond_nonempty signal to continue
     
-    out = buffer->tail->msg; //save output value
-    trash = buffer->tail; //save address of just-pulled msg to free later
+    out = buffer->tail; //save address of just-pulled msg to free later
 
     if (buffer->tail->prev == NULL) {
         buffer->tail == NULL;
@@ -127,7 +123,6 @@ logger_msg_t pull(logger_buff_t* buffer) {
     pthread_mutex_unlock(&buffer->lock); //IMPORTANT: Unlock mutex before signaling so waiting threads can acquire lock
     pthread_cond_signal(&buffer->cond_nonfull);
 
-    loggerMsgNodeDestroy(trash); //takeout the trash :-)
     return out;
 }
 
@@ -151,21 +146,30 @@ void flush(logger_buff_t* buffer) {
 int loggerMain(logger_t* logger) {
     int status;
     while (1) {
-        logger_buff_node_t *rec_node = pull(&logger->buffer);
+        logger_buff_node_t* rec_node = pull(&logger->buffer);
         logger_msg_t rec_msg = rec_node->msg;
+        loggerMsgNodeDestroy(rec_node); //after copying message to local heap destroy node
 
         switch (rec_msg.cmd)
         {
         case LOG:
             FILE *f = fopen(rec_msg.abs_path, 'a');
             if (f == NULL) {
-                //log error 
-                
+                char msg[] = "loggerMain: Error opening provided path\n"; 
+                printf("%s",msg);
+                logStatus(logger, msg); 
+            }
+            else {
+                if (fprintf(f,"%s",rec_msg.data) < 0) {
+                    char msg[] = "loggerMain: Error writing to provided path\n";
+                    printf("%s", msg);
+                    logStatus(logger,msg);
+                }
             }
             break;
         case CLOSE:
             /** FREE MEMORY HERE **/
-            return;
+            return loggerDestroy(logger);
             break;
         default:
             break;
