@@ -125,6 +125,23 @@ logger_buff_node_t* pull(logger_buff_t* buffer) {
     return out;
 }
 
+void flush(logger_buff_t* buffer) {
+    /** Destroys all messages currently in the buffer **/
+    pthread_mutex_lock(&buffer->lock);
+    if (buffer->occupancy <= 0) return;
+    
+    logger_buff_node_t* p = buffer->head;
+    logger_buff_node_t* p_tmp;
+    while (p != NULL) {
+        p_tmp = p;
+        p = p->next;
+        loggerMsgNodeDestroy(p_tmp);
+    }
+    buffer->head = NULL;
+    buffer->tail = NULL;
+    buffer->occupancy = 0;
+}
+
 int loggerMain(logger_t* logger) {
     int status;
     while (1) {
