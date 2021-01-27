@@ -8,7 +8,8 @@
 logger_buff_t loggerBufferInit(uint16_t max_size) {
     logger_buff_t buffer;
     pthread_mutex_init(&buffer.lock, NULL);
-    pthread_cond_init(&buffer.cond, NULL);
+    pthread_cond_init(&buffer.cond_nonempty, NULL);
+    pthread_cond_init(&buffer.cond_nonfull, NULL);
     buffer.max_buff_size = max_size;
     buffer.head = NULL;
     buffer.tail = NULL;

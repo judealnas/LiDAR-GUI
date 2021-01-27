@@ -17,11 +17,13 @@ typedef struct LoggerMessage {
 typedef struct LoggerBufferNode {
     logger_msg_t msg;
     struct LoggerBufferNode *next;
+    struct LoggerBufferNode *prev;
 } logger_buff_node_t;
 
 typedef struct LoggerBuffer {
     pthread_mutex_t lock;
-    pthread_cond_t cond;
+    pthread_cond_t cond_nonempty;
+    pthread_cond_t cond_nonfull;
     uint16_t max_buff_size;
     uint16_t occupancy;
     logger_buff_node_t *head;
