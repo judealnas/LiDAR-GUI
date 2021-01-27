@@ -1,6 +1,6 @@
 status_logs.txt
 __pycache__/
 status_logs.txt
-experiment.py
+experiment.*
 *.pyc
 status_logs.txt
