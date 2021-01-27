@@ -110,7 +110,7 @@ logger_msg_t pull(logger_buff_t* buffer) {
         pthread_cond_wait(&buffer->cond_nonempty, &buffer->lock);
     } //if the buffer is empty, block until the cond_nonempty signal to continue
     
-    out = *buffer->tail; //save output value
+    out = buffer->tail->msg; //save output value
     trash = buffer->tail; //save address of just-pulled msg to free later
 
     if (buffer->tail->prev == NULL) {
