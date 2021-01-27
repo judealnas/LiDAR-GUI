@@ -45,7 +45,15 @@ logger_buff_t* loggerBufferInit(uint16_t max_size) {
 
     return buffer;
 }
+int loggerBufferDestroy(logger_buff_t* buffer) {
+    /** ASSUMES ONE MASTER PRODUCER THAT STOPS CALLING MUTEXES/CONDS AFTER CLOSE COMMAND IS SENT **/
+    flush(buffer);
+    pthread_cond_destroy(&buffer->cond_nonfull);
+    pthread_cond_destroy(&buffer->cond_nonempty);
+    pthread_mutex_destroy(&buffer->lock);
 
+    
+}
 int push(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_priority, bool blocking) {
     /** Add a node to the linked list buffer. If hi_priority is true, new_node is added at the tail of buffer. 
      *  Otherwise, new_node is appended at the head. If blocking is true, this function will block if the buffer
