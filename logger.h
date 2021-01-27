@@ -31,20 +31,7 @@ typedef struct LoggerBuffer {
 } logger_buff_t;
 
 typedef struct Logger {
-    logger_buff_t buffer;  
-    int status; //status
+    logger_buff_t *buffer;
+    char *stat_log_path;
+    FILE *stat_log_file;  
 } logger_t; 
-
-//linked list buffer functions
-logger_buff_t loggerBufferInit(uint16_t);
-void push(logger_buff_t *, logger_buff_node_t *, bool , bool);
-logger_buff_node_t* pull(logger_buff_t* );
-void flush(logger_buff_t *buffer);
-
-//logger logic
-void createMsg();
-
-//High level utility functions exposed to producers
-void loggerInit(logger_t *, uint16_t); //initialize Logger and return configured struct
-void logClose(logger_t *);
-int logMsg(logger_t *, char* , uint16_t , char*);
