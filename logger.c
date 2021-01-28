@@ -5,7 +5,6 @@
 #include <sys/stat.h>
 #include <time.h>
 
-//logging logic functions
 logger_buff_node_t* loggerMsgNodeCreate(logger_cmd_t cmd, char* path, char* data, uint16_t data_size) {
     /** Given message parameters, first constructs a LoggerMessage structure followed by
      * a Logger Buffer Node structure **/
@@ -17,7 +16,7 @@ logger_buff_node_t* loggerMsgNodeCreate(logger_cmd_t cmd, char* path, char* data
     msg.data_leng = data_size;
 
     //copy msg data by-value into memory allocated for buffer node
-    logger_buff_node_t* node = (logger_buff_node_t*) malloc(2*sizeof(logger_buff_node_t) + sizeof(msg));
+    logger_buff_node_t* node = (logger_buff_node_t*) malloc(sizeof(logger_buff_node_t) + sizeof(msg));
     node->msg = msg;
     
     return node;
@@ -33,7 +32,6 @@ void loggerMsgNodeDestroy(logger_buff_node_t* node) {
     return;
 }
 
-//logger buffer logic functions
 logger_buff_t* loggerBufferInit(uint16_t max_size) {
     logger_buff_t* buffer = (logger_buff_t*) malloc(sizeof(logger_buff_t));
     pthread_mutex_init(&buffer->lock, NULL);
@@ -42,6 +40,7 @@ logger_buff_t* loggerBufferInit(uint16_t max_size) {
     buffer->max_buff_size = max_size;
     buffer->head = NULL;
     buffer->tail = NULL;
+    buffer->occupancy = 0;
 
     return buffer;
 }
@@ -51,7 +50,10 @@ int loggerBufferDestroy(logger_buff_t* buffer) {
     pthread_cond_destroy(&buffer->cond_nonfull);
     pthread_cond_destroy(&buffer->cond_nonempty);
     pthread_mutex_destroy(&buffer->lock);
+
+    return free(buffer);
 }
+
 int push(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_priority, bool blocking) {
     /** Add a node to the linked list buffer. If hi_priority is true, new_node is added at the tail of buffer. 
      *  Otherwise, new_node is appended at the head. If blocking is true, this function will block if the buffer
@@ -139,6 +141,8 @@ void flush(logger_buff_t* buffer) {
     buffer->head = NULL;
     buffer->tail = NULL;
     buffer->occupancy = 0;
+
+    return;
 }
 
 int loggerMain(logger_t* logger) {
@@ -175,7 +179,6 @@ int loggerMain(logger_t* logger) {
     }
 }
 
-//High level interface functions
 int loggerInit(logger_t* logger, uint16_t buffer_size) {
     /**Returns a configured logger struct to the buffer pointed to by logger
      * Calls buffer initialization and create a log file for status reports.
@@ -207,6 +210,7 @@ int loggerInit(logger_t* logger, uint16_t buffer_size) {
     //Buffer initialization
     logger->buffer = loggerBufferInit(buffer_size);
 
+    //enter the main loop of the logger
     return loggerMain(logger);
 }
 
