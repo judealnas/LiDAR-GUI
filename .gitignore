@@ -1,7 +1,4 @@
-status_logs.txt
 __pycache__/
-status_logs.txt
-experiment.*
 *.pyc
-status_logs.txt
-a.out
+*.txt
+*.csv
