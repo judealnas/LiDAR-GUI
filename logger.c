@@ -1,9 +1,4 @@
 #include <logger.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <time.h>
 
 logger_buff_node_t* loggerMsgNodeCreate(logger_cmd_t cmd, char* path, char* data, uint16_t data_size) {
     /** Given message parameters, first constructs a LoggerMessage structure followed by
@@ -44,14 +39,16 @@ logger_buff_t* loggerBufferInit(uint16_t max_size) {
 
     return buffer;
 }
+
 int loggerBufferDestroy(logger_buff_t* buffer) {
     /** ASSUMES ONE MASTER PRODUCER THAT STOPS CALLING MUTEXES/CONDS AFTER CLOSE COMMAND IS SENT **/
     flush(buffer);
     pthread_cond_destroy(&buffer->cond_nonfull);
     pthread_cond_destroy(&buffer->cond_nonempty);
     pthread_mutex_destroy(&buffer->lock);
+    free(buffer);
 
-    return free(buffer);
+    return 0;
 }
 
 int push(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_priority, bool blocking) {
@@ -61,7 +58,7 @@ int push(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_priority, 
     pthread_mutex_lock(&buffer->lock);
     if (buffer->occupancy >= buffer->max_buff_size) {
         if (blocking) {
-            pthread_cond_wait(&buffer->lock, &buffer->cond_nonfull);
+            pthread_cond_wait( &buffer->cond_nonfull,&buffer->lock);
         }
         else {
             return -1;
@@ -145,17 +142,36 @@ void flush(logger_buff_t* buffer) {
     return;
 }
 
+
+int loggerDestroy(logger_t* logger) {
+    loggerBufferDestroy(logger->buffer);
+    free(logger->stat_log_path);
+    int f_status = fclose(logger->stat_log_file);
+
+    return f_status;
+}
+
+int logStatus(logger_t* logger, char* msg) {
+    /** Utility function for internal status logging **/
+    return fprintf(logger->stat_log_file,"%s",msg);
+}
+
+//High-level functions for use by producer
 int loggerMain(logger_t* logger) {
+    /** CORE FUNCTIONALITY OF LOGGER IMPLEMENTED HERE.
+     * Pass as argument to pthreads_create for multithreading.
+     * Pass a logger constructed using loggerInit(). **/
+
     int status;
     while (1) {
-        logger_buff_node_t* rec_node = pull(&logger->buffer);
+        logger_buff_node_t* rec_node = pull(logger->buffer);
         logger_msg_t rec_msg = rec_node->msg;
         loggerMsgNodeDestroy(rec_node); //after copying message to local heap destroy node
 
         switch (rec_msg.cmd)
         {
-        case LOG:
-            FILE *f = fopen(rec_msg.abs_path, 'a');
+        case LOG:;
+            FILE* f = fopen(rec_msg.abs_path, "a");
             if (f == NULL) {
                 char msg[] = "loggerMain: Error opening provided path\n"; 
                 printf("%s",msg);
@@ -179,51 +195,48 @@ int loggerMain(logger_t* logger) {
     }
 }
 
-int loggerInit(logger_t* logger, uint16_t buffer_size) {
+logger_t* loggerCreate(uint16_t buffer_size) {
     /**Returns a configured logger struct to the buffer pointed to by logger
      * Calls buffer initialization and create a log file for status reports.
      * Use as parameter to pthreads_create for threaded logging **/
-    
+
     //stat log initialization////////////////////////////
     char *stat_log_stem = "/logger_logs.txt"; //WARNING: ASSUME UNIX PATH SEPARATOER
     char *stat_log_root = "./logs";
     mkdir(stat_log_root, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); 
-    logger->stat_log_path = (char*) malloc(strlen(stat_log_root)+strlen(stat_log_stem)); //MEMCHECK 4
-    if (logger->stat_log_path == NULL) {
-        printf("ERROR ALLOCATING MEMORY STAT LOG PATH IN LOGGER INITIALIZATION");
+    char *stat_log_path = (char*) malloc(strlen(stat_log_root)+strlen(stat_log_stem)+2); //MEMCHECK 4
+    if (stat_log_path == NULL) {
+        printf("ERROR ALLOCATING MEMORY FOR STAT LOG PATH IN LOGGER INITIALIZATION");
     }
-    strcpy(logger->stat_log_path,stat_log_root);
-    strcat(logger->stat_log_path,stat_log_stem);
-    logger->stat_log_file = fopen(logger->stat_log_path, 'a');
+    strcpy(stat_log_path,stat_log_root);
+    strcat(stat_log_path,stat_log_stem);
+    FILE* stat_log_file = fopen(stat_log_path, "a");
+    if (stat_log_file == NULL) {
+        printf("ERROR OPENING STAT LOG FILE REFERENCE");
+    }
 
     //write current time and separator to file
-    char sep[] = '-----------------------------------\n';
-    char timestring[32];
+    uint8_t timestring_size = 32;
+    char sep[] = "-----------------------------------\n";
+    char timestring[timestring_size];
     struct tm now;
     time_t rawtime = time(NULL);
     gmtime_r(&rawtime,&now);
-    strftime(timestring, 30,"%F %T\n",&now);
-    fprintf(logger->stat_log_file,"%s", timestring);
-    fprintf(logger->stat_log_file,"%s", sep);
+    strftime(timestring, timestring_size,"%F %T\n",&now);
+    fprintf(stat_log_file,"%s", timestring);
+    fprintf(stat_log_file,"%s", sep);
     /////////////////////////////////////////////////////////////////
 
     //Buffer initialization
-    logger->buffer = loggerBufferInit(buffer_size);
+    logger_buff_t* buffer = loggerBufferInit(buffer_size); //returns pointer to buffer in allocated memory
 
-    //enter the main loop of the logger
-    return loggerMain(logger);
-}
-
-int loggerDestroy(logger_t* logger) {
-    loggerBufferDestroy(logger->buffer);
-    int f_status = fclose(logger->stat_log_file);
-
-    return f_status;
-}
-
-int logStatus(logger_t* logger, char* msg) {
-    /** Utility function for internal status logging **/
-    return fprintf(logger->stat_log_file,"%s",msg);
+    //once data members are allocated
+    logger_t* logger = (logger_t*) malloc(sizeof(stat_log_file) + sizeof(stat_log_path)+sizeof(*buffer));
+    logger->buffer = buffer;
+    logger->stat_log_file = stat_log_file;
+    logger->stat_log_path = stat_log_path;
+    
+    return logger; 
 }
 
 void loggerClose(logger_t* logger, bool hi_priority, bool blocking) {
@@ -232,5 +245,10 @@ void loggerClose(logger_t* logger, bool hi_priority, bool blocking) {
     return;
 }
 
-int logMsg(logger_t* logger, char* msg, uint16_t msg_size, char* path, uint16_t path_size) {
-}   
+int loggerMsg(logger_t* logger, char* msg, uint16_t msg_size, char* path, uint16_t path_size) {
+    /** Utility function meant to be called by producer.
+     * Constructs a logger buffer node containing the passed data 
+     * and places the node on the buffer queue  **/
+}  
+
+int loggerPriorityMsg(logger_t* logger, char* msg, uint16_t msg_size, char* path, uint16_t path_size) {}
