@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 *.txt
 *.csv
+.vscode/launch.json
+.vscode/tasks.json

@@ -52,7 +52,7 @@ logger_buff_node_t* pull(logger_buff_t* buffer);
 void flush(logger_buff_t* buffer);
 int loggerDestroy(logger_t* logger);
 int logStatus(logger_t* logger, char* msg);
-int loggerMain(logger_t* logger);
+void* loggerMain(void* logger);
 logger_t* loggerCreate(uint16_t buffer_size);
 void loggerClose(logger_t* logger, bool hi_priority, bool blocking);
 int loggerMsg(logger_t* logger, char* msg, uint16_t msg_size, char* path, uint16_t path_size);

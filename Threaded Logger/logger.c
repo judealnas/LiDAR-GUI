@@ -157,11 +157,11 @@ int logStatus(logger_t* logger, char* msg) {
 }
 
 //High-level functions for use by producer
-int loggerMain(logger_t* logger) {
+void* loggerMain(void* _logger) {
     /** CORE FUNCTIONALITY OF LOGGER IMPLEMENTED HERE.
      * Pass as argument to pthreads_create for multithreading.
      * Pass a logger constructed using loggerInit(). **/
-
+    logger_t* logger = (logger_t*) logger;
     int status;
     while (1) {
         logger_buff_node_t* rec_node = pull(logger->buffer);
@@ -185,9 +185,11 @@ int loggerMain(logger_t* logger) {
                 }
             }
             break;
-        case CLOSE:
+        case CLOSE:;
             /** FREE MEMORY HERE **/
-            return loggerDestroy(logger);
+            int* return_status = (int*) malloc(sizeof(int));
+            *return_status = loggerDestroy(logger);
+            return (void*) (return_status);
             break;
         default:
             break;
@@ -222,7 +224,7 @@ logger_t* loggerCreate(uint16_t buffer_size) {
     struct tm now;
     time_t rawtime = time(NULL);
     gmtime_r(&rawtime,&now);
-    strftime(timestring, timestring_size,"%F %T\n",&now);
+    strftime(timestring, timestring_size,"\n%F %T %Z\n",&now);
     fprintf(stat_log_file,"%s", timestring);
     fprintf(stat_log_file,"%s", sep);
     /////////////////////////////////////////////////////////////////

@@ -19,7 +19,7 @@ void getTimeString(char* str_result, size_t str_size, char delim) {
 	struct tm *curr_time_tm = gmtime(&(curr_time_tv.tv_sec)); //use sec of timeval to get struct tm
 
 	//use tm to get timestamp string
-	strftime(time_str, str_size, "%Y-%m-%d-%H-%M-%S",curr_time_tm);
+	strftime(time_str, str_size, "%Y-%m-%d-%H-%M-%S-%Z",curr_time_tm);
 	snprintf(str_result, str_size, "%s-%ld",time_str, curr_time_tv.tv_usec); //add microseconds
     
     //replace default '-' delimiter if needed
@@ -44,7 +44,8 @@ int main(int argc, char *argv[]) {
     size_t str_size = s;
     char out[str_size];
 
-    //getTimeString(out,str_size, '-');
+    getTimeString(out,str_size, '-');
+    printf("%s\n",out);
     struct timeval curr_time;
     gettimeofday(&curr_time, NULL);
     sprintf(out,"%*lu\.%*lu", sizeof(time_t), curr_time.tv_sec, 
