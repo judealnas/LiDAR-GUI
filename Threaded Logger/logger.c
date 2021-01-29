@@ -9,10 +9,12 @@ logger_buff_node_t* loggerMsgNodeCreate(logger_cmd_t cmd, char* path, char* data
     msg.abs_path = strdup(path); //strdup allocates memory that must be freed
     msg.data = strdup(data); //strdup allocates memory that must be freed
     msg.data_leng = data_size;
+    msg.cmd = cmd;
 
     //copy msg data by-value into memory allocated for buffer node
     logger_buff_node_t* node = (logger_buff_node_t*) malloc(sizeof(logger_buff_node_t) + sizeof(msg));
     node->msg = msg;
+    
     
     return node;
 }
@@ -99,8 +101,10 @@ logger_buff_node_t* pull(logger_buff_t* buffer) {
 /** Returns pointer to last node in list. **/
     logger_buff_node_t* out;   
 
+    printf("%s\n", "pull: before mutex lock");
     pthread_mutex_lock(&buffer->lock);
     if (buffer->occupancy <= 0) {
+        printf("%s\n", "pull: before cond lock");
         pthread_cond_wait(&buffer->cond_nonempty, &buffer->lock);
     } //if the buffer is empty, block until the cond_nonempty signal to continue
     
@@ -157,42 +161,49 @@ int logStatus(logger_t* logger, char* msg) {
 }
 
 //High-level functions for use by producer
-void* loggerMain(void* _logger) {
+void* loggerMain(void* arg_logger) {
     /** CORE FUNCTIONALITY OF LOGGER IMPLEMENTED HERE.
      * Pass as argument to pthreads_create for multithreading.
      * Pass a logger constructed using loggerInit(). **/
-    logger_t* logger = (logger_t*) logger;
+    logger_t* logger = (logger_t*) arg_logger;
     int status;
     while (1) {
+        printf("%s\n", "ENTERED LOGGER MAIN");
         logger_buff_node_t* rec_node = pull(logger->buffer);
+        printf("%s\n","after pull");
         logger_msg_t rec_msg = rec_node->msg;
-        loggerMsgNodeDestroy(rec_node); //after copying message to local heap destroy node
+        printf("%s\n", "After msg destroyed");
 
         switch (rec_msg.cmd)
         {
         case LOG:;
+            printf("%s\n","Received LOG command");
+            printf("Received path: %s\n", rec_msg.abs_path);
             FILE* f = fopen(rec_msg.abs_path, "a");
             if (f == NULL) {
-                char msg[] = "loggerMain: Error opening provided path\n"; 
-                printf("%s",msg);
+                char msg[] = "loggerMain: Error opening provided path"; 
+                printf("%s\n",msg);
                 logStatus(logger, msg); 
             }
             else {
                 if (fprintf(f,"%s",rec_msg.data) < 0) {
-                    char msg[] = "loggerMain: Error writing to provided path\n";
-                    printf("%s", msg);
+                    char msg[] = "loggerMain: Error writing to provided path";
+                    printf("%s\n", msg);
                     logStatus(logger,msg);
                 }
             }
             break;
         case CLOSE:;
             /** FREE MEMORY HERE **/
+            printf("%s\n","Received CLOSE command");
             int* return_status = (int*) malloc(sizeof(int));
             *return_status = loggerDestroy(logger);
             return (void*) (return_status);
             break;
         default:
             break;
+        
+        loggerMsgNodeDestroy(rec_node); //destroy message after processing
         }
     }
 }
@@ -210,13 +221,14 @@ logger_t* loggerCreate(uint16_t buffer_size) {
     if (stat_log_path == NULL) {
         printf("ERROR ALLOCATING MEMORY FOR STAT LOG PATH IN LOGGER INITIALIZATION");
     }
+
     strcpy(stat_log_path,stat_log_root);
     strcat(stat_log_path,stat_log_stem);
     FILE* stat_log_file = fopen(stat_log_path, "a");
     if (stat_log_file == NULL) {
         printf("ERROR OPENING STAT LOG FILE REFERENCE");
     }
-
+    
     //write current time and separator to file
     uint8_t timestring_size = 32;
     char sep[] = "-----------------------------------\n";
@@ -237,13 +249,11 @@ logger_t* loggerCreate(uint16_t buffer_size) {
     logger->buffer = buffer;
     logger->stat_log_file = stat_log_file;
     logger->stat_log_path = stat_log_path;
-    
     return logger; 
 }
 
 void loggerClose(logger_t* logger, bool hi_priority, bool blocking) {
-    loggerMsgNodeCreate(CLOSE,NULL,NULL,0);
-    push(logger->buffer,loggerMsgNodeCreate(CLOSE,NULL,NULL,0),hi_priority, blocking);
+    push(logger->buffer,loggerMsgNodeCreate(CLOSE,"none","NaN",0),hi_priority, blocking);
     return;
 }
 
@@ -251,6 +261,7 @@ int loggerMsg(logger_t* logger, char* msg, uint16_t msg_size, char* path, uint16
     /** Utility function meant to be called by producer.
      * Constructs a logger buffer node containing the passed data 
      * and places the node on the buffer queue  **/
+    push(logger->buffer,loggerMsgNodeCreate(LOG, path, msg, msg_size), 0, 1);
 }  
 
 int loggerPriorityMsg(logger_t* logger, char* msg, uint16_t msg_size, char* path, uint16_t path_size) {}
