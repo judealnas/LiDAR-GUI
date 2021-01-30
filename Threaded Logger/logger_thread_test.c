@@ -1,16 +1,20 @@
 #include <logger.h>
-#include <pthread.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
 
 int main() {
     pthread_t logger_thread;
-    logger_t* logger = loggerCreate(50);
-    printf("%s\n","here");
+    logger_t* logger = loggerCreate(4);
     pthread_create(&logger_thread,NULL,&loggerMain,logger);
-    printf("%s\n","After create");
-    loggerMsg(logger,"Hello World\n",sizeof("hello world\n"),"./test.txt",sizeof("./test.txt"));
+    printf("Logger Thread ID: %ld\n", logger_thread);
+    double n = 0;
+    for (int i = 1; i < 6; i++) {
+        char msg[500];
+        sprintf(msg,"%d\n", i);
+        printf("\n\n\n\ntest:: msg=%s",msg);
+        loggerLogMsg(logger,msg,sizeof(msg),"./test.txt",0);
+        usleep(1);
+    }
+    
+    printf("test:: sending close message\n");
     loggerClose(logger,0,1);
     pthread_join(logger_thread,NULL);
     return 0;

@@ -6,19 +6,18 @@ void* loggerMain(void* arg_logger) {
      * Pass as argument to pthreads_create for multithreading.
      * Pass a logger constructed using loggerInit(). **/
     logger_t* logger = (logger_t*) arg_logger;
-    int status;
     while (1) {
-        printf("%s\n", "ENTERED LOGGER MAIN");
         logger_buff_node_t* rec_node = loggerPull(logger->buffer);
-        printf("%s\n","after loggerPull");
+        if (rec_node == NULL) {
+            printf("NULL pointer received\n");
+        }
         logger_msg_t rec_msg = rec_node->msg;
-        printf("%s\n", "After msg destroyed");
 
+        printf("loggerMain:: CMD: %d\t PATH: %s\t MSG: %s\n", rec_msg.cmd, rec_msg.path, rec_msg.data);
         switch (rec_msg.cmd)
         {
         case LOG:;
-            printf("%s\n","Received LOG command");
-            printf("Received path: %s\n", rec_msg.path);
+            usleep(100000);
             FILE* f = fopen(rec_msg.path, "a");
             if (f == NULL) {
                 char msg[] = "loggerMain: Error opening provided path"; 
@@ -26,16 +25,17 @@ void* loggerMain(void* arg_logger) {
                 logStatus(logger, msg); 
             }
             else {
+                printf("Writing \"%s\"\n", rec_msg.data);
                 if (fprintf(f,"%s",rec_msg.data) < 0) {
                     char msg[] = "loggerMain: Error writing to provided path";
                     printf("%s\n", msg);
                     logStatus(logger,msg);
                 }
             }
+            fclose(f);
             break;
         case CLOSE:;
             /** FREE MEMORY HERE **/
-            printf("%s\n","Received CLOSE command");
             int* return_status = (int*) malloc(sizeof(int));
             *return_status = loggerDestroy(logger);
             return (void*) (return_status);
@@ -163,6 +163,7 @@ int loggerPush(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_prio
     int lock_status;
     if (blocking) {
         //block until mutex acquired
+        printf("loggerPush:: waiting for lock\n");
         lock_status = pthread_mutex_lock(&buffer->lock);
     }
     else {
@@ -172,15 +173,25 @@ int loggerPush(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_prio
             return lock_status;
         }
     }
+    printf("loggerPush:: lock\n");
 
     if (lock_status == 0) { 
         if (buffer->occupancy >= buffer->max_buff_size) {
-            printf("loggerPush: waiting for cond_nonfull\n");
-            pthread_cond_wait( &buffer->cond_nonfull,&buffer->lock);
-        } //block until space available in buffer
+            if (blocking) {
+                printf("loggerPush: waiting for cond_nonfull\n");
+                pthread_cond_wait(&buffer->cond_nonfull,&buffer->lock);
+                printf("loggerPush: cond_nonfull\n");
+            } //if blocking set, wait for signal that space available
+            else {
+                pthread_mutex_unlock(&buffer->lock);
+                return -1;
+            } //otw release mutex and exit with -1
+        } //wait or exit if buffer is full
         
         else {
+            printf("loggerPush: buffer head: %p\n", buffer->head);
             if (buffer->head == NULL) {
+                printf("loggerPush: adding initial element\n");
                 //if the buffer is empty, add appropriately
                 new_node->prev = NULL;
                 new_node->next = NULL;
@@ -189,6 +200,7 @@ int loggerPush(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_prio
             }
             else if (hi_priority) {
                 // add node at tail
+                printf("loggerPush: adding to tail\n");
                 new_node->next = NULL;
                 new_node->prev = buffer->tail;
                 buffer->tail->next = new_node;
@@ -196,6 +208,7 @@ int loggerPush(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_prio
             }
             else {
                 //add node to head
+                printf("loggerPush: adding to head\n");
                 new_node->next = buffer->head; //current head is now second
                 new_node->prev = NULL; //new node has nothing before
                 buffer->head->prev = new_node; //old node points to new node
@@ -204,8 +217,11 @@ int loggerPush(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_prio
         }
     
         buffer->occupancy++;
-        pthread_mutex_unlock(&buffer->lock); //IMPORTANT: Unlock mutex before signaling so waiting threads can acquire lock
+        printf("Buffer occupancy after push: %d\n", buffer->occupancy);
+        printf("loggerPush:: signal\n");
         pthread_cond_signal(&buffer->cond_nonempty);
+        printf("loggerPush:: unlock\n");
+        pthread_mutex_unlock(&buffer->lock); //IMPORTANT: Unlock mutex before signaling so waiting threads can acquire lock
     } //continue if mutex successfully locked
 
     return lock_status;
@@ -216,17 +232,23 @@ logger_buff_node_t* loggerPull(logger_buff_t* buffer) {
     logger_buff_node_t* out;   
 
     int lock_status;
-    lock_status = pthread_mutex_lock(&buffer->lock);
+    printf("loggerPull:: waiting for lock\n");
+    lock_status = pthread_mutex_lock(&buffer->lock); 
+    printf("loggerPull:: lock\n");
+
     if (lock_status == 0) {
+        printf("loggerPull: before occupancy read\n");
         if (buffer->occupancy <= 0) {
+            printf("loggerPull:: waiting for cond_nonempty\n");
             pthread_cond_wait(&buffer->cond_nonempty, &buffer->lock);
+            printf("loggerPull:: cond_nonempty\n");
         } //if the buffer is empty, block until the cond_nonempty signal to continue
         
         out = buffer->tail; //save address of just-pulled msg to free later
-
+        printf("loggerPull:: after output assigned\n");
         if (buffer->tail->prev == NULL) {
-            buffer->tail == NULL;
-            buffer->head == NULL;
+            buffer->tail = NULL;
+            buffer->head = NULL;
         } //if prev == NULL, then current node is only node in list.
         else {
             buffer->tail->prev->next = NULL; //previous node now links to NULL as end of buffer
@@ -234,9 +256,11 @@ logger_buff_node_t* loggerPull(logger_buff_t* buffer) {
         } //else there are more nodes in list. Update next-to-last node's pointers accordingly
         
         buffer->occupancy--;
-
-        pthread_mutex_unlock(&buffer->lock); //IMPORTANT: Unlock mutex before signaling so waiting threads can acquire lock
+        printf("Buffer occupancy after pull: %d\n", buffer->occupancy);
+        printf("loggerPull:: signal\n");
         pthread_cond_signal(&buffer->cond_nonfull);
+        printf("loggerPull:: unlock\n");
+        pthread_mutex_unlock(&buffer->lock); //IMPORTANT: signal before unlocking mutex so waiting threads can acquire lock
         
         return out;
     } //continue on successful mutex lock
@@ -300,5 +324,4 @@ int loggerLogMsg(logger_t* logger, char* msg, size_t msg_size, char* path, bool 
 
 int loggerTryLogMsg(logger_t* logger, char* msg, size_t msg_size, char* path, bool hi_priority) {
     return loggerPush(logger->buffer,loggerMsgNodeCreate(LOG, path, msg, msg_size), hi_priority, 0);
-
 }
