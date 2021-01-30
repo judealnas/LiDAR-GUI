@@ -1,5 +1,15 @@
 #include <logger.h>
 
+void printBuffer(logger_buff_t* buffer) {
+    int n = 0;
+    logger_buff_node_t* p;
+    for (p = buffer->head; p != NULL; p = p->next) {
+        printf("Buffer entry %d: Address=%p\tNext=%p\tPrev=%p\n",n,p,p->next,p->prev);
+        n++;
+    }
+
+    return;
+}
 
 void* loggerMain(void* arg_logger) {
     /** CORE FUNCTIONALITY OF LOGGER IMPLEMENTED HERE.
@@ -17,7 +27,7 @@ void* loggerMain(void* arg_logger) {
         switch (rec_msg.cmd)
         {
         case LOG:;
-            usleep(100000);
+            usleep(1000000);
             FILE* f = fopen(rec_msg.path, "a");
             if (f == NULL) {
                 char msg[] = "loggerMain: Error opening provided path"; 
@@ -188,35 +198,34 @@ int loggerPush(logger_buff_t *buffer, logger_buff_node_t *new_node, bool hi_prio
             } //otw release mutex and exit with -1
         } //wait or exit if buffer is full
         
+        printf("loggerPush: buffer head: %p\n", buffer->head);
+        if (buffer->head == NULL) {
+            printf("loggerPush: adding initial element\n");
+            //if the buffer is empty, add appropriately
+            new_node->prev = NULL;
+            new_node->next = NULL;
+            buffer->head = new_node;
+            buffer->tail = new_node;
+        }
+        else if (hi_priority) {
+            // add node at tail
+            printf("loggerPush: adding to tail\n");
+            new_node->next = NULL;
+            new_node->prev = buffer->tail;
+            buffer->tail->next = new_node;
+            buffer->tail = new_node;
+        }
         else {
-            printf("loggerPush: buffer head: %p\n", buffer->head);
-            if (buffer->head == NULL) {
-                printf("loggerPush: adding initial element\n");
-                //if the buffer is empty, add appropriately
-                new_node->prev = NULL;
-                new_node->next = NULL;
-                buffer->head = new_node;
-                buffer->tail = new_node;
-            }
-            else if (hi_priority) {
-                // add node at tail
-                printf("loggerPush: adding to tail\n");
-                new_node->next = NULL;
-                new_node->prev = buffer->tail;
-                buffer->tail->next = new_node;
-                buffer->tail = new_node;
-            }
-            else {
-                //add node to head
-                printf("loggerPush: adding to head\n");
-                new_node->next = buffer->head; //current head is now second
-                new_node->prev = NULL; //new node has nothing before
-                buffer->head->prev = new_node; //old node points to new node
-                buffer->head = new_node; //head points to new node
-            }
+            //add node to head
+            printf("loggerPush: adding to head\n");
+            new_node->next = buffer->head; //current head is now second
+            new_node->prev = NULL; //new node has nothing before
+            buffer->head->prev = new_node; //old node points to new node
+            buffer->head = new_node; //head points to new node
         }
     
         buffer->occupancy++;
+        printBuffer(buffer);
         printf("Buffer occupancy after push: %d\n", buffer->occupancy);
         printf("loggerPush:: signal\n");
         pthread_cond_signal(&buffer->cond_nonempty);
@@ -256,6 +265,7 @@ logger_buff_node_t* loggerPull(logger_buff_t* buffer) {
         } //else there are more nodes in list. Update next-to-last node's pointers accordingly
         
         buffer->occupancy--;
+        printBuffer(buffer);
         printf("Buffer occupancy after pull: %d\n", buffer->occupancy);
         printf("loggerPull:: signal\n");
         pthread_cond_signal(&buffer->cond_nonfull);
@@ -325,3 +335,4 @@ int loggerLogMsg(logger_t* logger, char* msg, size_t msg_size, char* path, bool 
 int loggerTryLogMsg(logger_t* logger, char* msg, size_t msg_size, char* path, bool hi_priority) {
     return loggerPush(logger->buffer,loggerMsgNodeCreate(LOG, path, msg, msg_size), hi_priority, 0);
 }
+
