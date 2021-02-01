@@ -35,7 +35,7 @@ logger_t* loggerCreate(uint16_t buffer_size);
 logger_msg_t* loggerMsgCreate(logger_cmd_t cmd, char* data_str, size_t data_size, char* path);
 
 //Destructor functions
-int loggerDestroy(logger_t* logger);
+logger_msg_t** loggerDestroy(logger_t* logger);
 void loggerMsgDestroy(logger_msg_t* msg);
 
 

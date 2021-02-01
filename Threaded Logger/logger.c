@@ -1,6 +1,5 @@
 #include <logger.h>
 
-
 void* loggerMain(void* arg_logger) {
     /** CORE FUNCTIONALITY OF LOGGER IMPLEMENTED HERE.
      * Pass as argument to pthreads_create for multithreading.
@@ -11,12 +10,10 @@ void* loggerMain(void* arg_logger) {
         if (rec_msg == NULL) {
             printf("NULL pointer received\n");
         }
-
         printf("loggerMain:: CMD: %d\t PATH: %s\t MSG: %s\n", rec_msg->cmd, rec_msg->path, rec_msg->data);
         switch (rec_msg->cmd)
         {
         case LOG:;
-            usleep(1000000);
             FILE* f = fopen(rec_msg->path, "a");
             if (f == NULL) {
                 char msg[] = "loggerMain: Error opening provided path"; 
@@ -35,9 +32,7 @@ void* loggerMain(void* arg_logger) {
             break;
         case CLOSE:;
             /** FREE MEMORY HERE **/
-            int* return_status = (int*) malloc(sizeof(int));
-            *return_status = loggerDestroy(logger);
-            return (void*) (return_status);
+            return loggerDestroy(logger);
             break;
         default:
             break;
@@ -94,12 +89,10 @@ logger_t* loggerCreate(uint16_t buffer_size) {
 }
 
 //Destructors
-int loggerDestroy(logger_t* logger) {
-    fifoBufferDestroy(logger->buffer);
+logger_msg_t** loggerDestroy(logger_t* logger) {
     free(logger->stat_log_path);
-    int f_status = fclose(logger->stat_log_file);
+    return (logger_msg_t**)fifoBufferClose(logger->buffer);
 
-    return f_status;
 }
 
 logger_msg_t* loggerMsgCreate(logger_cmd_t cmd, char* data_str, size_t data_size, char* path) {
