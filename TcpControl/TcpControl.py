@@ -96,7 +96,7 @@ class TcpControl(baseClass, Ui_TcpControl):
     
     def writeSocket(self, msg: str):
         self.send_led.toggle()
-        write_status = self.socket.write(msg)
+        write_status = self.socket.write(bytes(msg, 'utf-8'))
         self.sig_log_event.emit(log_event_string+"writeSocket:: wrote {} with status {}".format(msg,write_status))
 
     def receiveLedState(self, state):
