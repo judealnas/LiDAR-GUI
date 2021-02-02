@@ -12,7 +12,7 @@ class TcpControl(baseClass, Ui_TcpControl):
     
     sig_broadcast_data = qtc.pyqtSignal(qtc.QByteArray)
     sig_log_event = qtc.pyqtSignal(str)
-      
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.setupUi(self)
@@ -22,12 +22,19 @@ class TcpControl(baseClass, Ui_TcpControl):
         
         ## signals
         self.dis_conn_button.released.connect(self.connectSocket)
-        self.socket.readyRead.connect(self.readSocket)
-        self.socket.stateChanged.connect()
+        self.socket.readyRead.connect(self.readSocket) #automatically read data from socket whenever availables
+        self.socket.stateChanged.connect(self.logSocketStateChage)  #for debugging, track state of socket
+        self.socket.errorOccurred.connect(self.logSocketError)  #log any socket errors as they occur
 
-    def socketMonitor(self, state: QTcpSocket.SocketState):
-        print(str(state))
+    def logSocketError(self, value:int):
+        error_str = self.socket.errorString()
+        self.sig_log_event.emit(log_event_string+error_str)
 
+
+    def logSocketStateChage(self, value: int): 
+        meta = self.socket.staticMetaObject
+        state_str = meta.enumerator(meta.indexOfEnumerator('SocketState')).valueToKey(value)
+        self.sig_log_event.emit(log_event_string+"Socket State = {}".format(state_str))
 
     def connectSocket(self):
         timeout_ms = 30*1000
@@ -100,7 +107,8 @@ class TcpControl(baseClass, Ui_TcpControl):
     
     def writeSocket(self, msg: str):
         self.send_led.toggle()
-        write_status = self.socket.write(bytes(msg, 'utf-8'))
+        print("Sending {}".format(bytes(msg + '\0', 'utf-8')))
+        write_status = self.socket.write(bytes(msg + '\0', 'utf-8'))
         self.sig_log_event.emit(log_event_string+"writeSocket:: wrote {} with status {}".format(msg,write_status))
 
     def receiveLedState(self, state):
