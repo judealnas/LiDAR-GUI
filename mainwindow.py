@@ -35,7 +35,6 @@ class MainWindow(qtw.QMainWindow):
         self.status_window.sizePolicy().setVerticalStretch(2)
         self.grid.addWidget(self.status_window, 2,1,1,1)
         
-
         self.central_widget.setLayout(self.grid)
         self.setCentralWidget(self.central_widget)
 
@@ -43,6 +42,7 @@ class MainWindow(qtw.QMainWindow):
         self.tcp_control.getBroadcastSignal().connect(self.lidar_plot.updateData)
         self.tcp_control.getLogSignal().connect(self.status_window.addMsg)
         self.lidar_plot.getLogSignal().connect(self.status_window.addMsg)
+        self.msg_control.getSendMsgSignal().connect(self.tcp_control.writeSocket)
 
         
         
