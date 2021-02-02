@@ -34,8 +34,8 @@ class MsgControl(qtw.QWidget):
     def sendMsg(self):
         self.sig_send_msg.emit(self.send_lineedit.text())
 
-    def getSendSignal(self):
-        return self.send_button.released
+    def getSendMsgSignal(self):
+        return self.sig_send_msg
 
     def setReceiveText(self, text):
         self.rec_lineedit.setText(text)
