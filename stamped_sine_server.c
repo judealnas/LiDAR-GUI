@@ -64,8 +64,14 @@ size_t getTimeString(char* str_result, size_t str_size, char delim)
 
 int main() 
 {
-	char server_message[50] = "You have reached the server!";
+	
+	//Initializing logging thread
 	logger_t* logger = loggerCreate(30);
+	pthread_t logger_tid;
+	pthread_create(&logger_tid, NULL, &loggerMain, logger);
+	////////////////////////////////////////
+
+	char server_message[50] = "You have reached the server!";
 
 	// create the listening server socket
 	int server_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -95,7 +101,8 @@ int main()
 		exit(1);
 	}
 	
-	while (1)  //loop to discard dead clients and wait for a reconnection 
+	uint8_t loop_stop = false;
+	while (!loop_stop)  //loop to discard dead clients and wait for a reconnection 
 	{
 		printf("Waiting for client connection...\n");
 
@@ -114,7 +121,6 @@ int main()
 		printf("Connection established\n");
 			
 		char time_str[TIME_STR_SIZE];
-		uint8_t loop_stop = 0;
 		int i = 0;
 		useconds_t delay =100000; //100 ms
 		printf("Entering loop...\n");
@@ -167,9 +173,10 @@ int main()
 			char received[rec_size];
 			if (recv(client_socket,received, rec_size, MSG_DONTWAIT) > 0) {
 				printf("Message received: %s\n", received);
-				loggerSendLogMsg(logger,msg,sizeof(msg),"./test_log.txt",0,false);
+				loggerSendLogMsg(logger,received,sizeof(received),"./test_log.txt",0,false);
 				printf("After log?\n");
-				if (strcmp(msg, "CLOSE")) {
+				if (strcmp(received, "CLOSE") == 0) {
+					printf("Stop Command Received\n");
 					loop_stop = true;
 				}
 			}
@@ -178,10 +185,11 @@ int main()
 			i = i % 360;
 
 			usleep(delay);
-		}	
-	}
-	
+		} // end while (!loop_stop)	
+	} // end while (1)
+	loggerSendCloseMsg(logger,0,true);
+	pthread_join(logger_tid,NULL);
 	close(server_socket);
-	printf("Exitted");
+	printf("Exitted\n");
 	return 0;
 }
