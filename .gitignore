@@ -7,3 +7,5 @@ __pycache__/
 *.o
 *.a
 *.out
+/Makefile
+Makefile
