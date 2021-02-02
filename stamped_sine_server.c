@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
-#include <pthread.h>
+#include "logger.h"
 
 #define PI 3.14159265
 
@@ -126,7 +126,7 @@ int main()
 			gettimeofday(&curr_time_tv,NULL);
 			sprintf
 			(
-				time_str,"%lu\.%06lu", curr_time_tv.tv_sec, curr_time_tv.tv_usec
+				time_str,"%lu.%06lu", curr_time_tv.tv_sec, curr_time_tv.tv_usec
 			);
 			
 			double x;
@@ -161,7 +161,12 @@ int main()
 				perror("Error in send(): ");
 				break;
 			}
-			
+
+			size_t rec_size = 100;
+			char received[rec_size];
+			if (recv(client_socket,received, rec_size, MSG_DONTWAIT) > 0) {
+				printf("Message received: %s", received);
+			}
 
 			i += 5;
 			i = i % 360;
