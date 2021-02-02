@@ -1,6 +1,9 @@
-status_logs.txt
 __pycache__/
-status_logs.txt
-experiment.py
 *.pyc
-status_logs.txt
+*.txt
+*.csv
+.vscode/launch.json
+.vscode/tasks.json
+*.o
+*.a
+*.out

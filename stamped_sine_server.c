@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
-#include <pthread.h>
+#include "Threaded Logger/logger.h"
 
 #define PI 3.14159265
 
@@ -65,7 +65,8 @@ size_t getTimeString(char* str_result, size_t str_size, char delim)
 int main() 
 {
 	char server_message[50] = "You have reached the server!";
-	
+	logger_t* logger = loggerCreate(30);
+
 	// create the listening server socket
 	int server_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_socket  < 0) 
@@ -126,7 +127,7 @@ int main()
 			gettimeofday(&curr_time_tv,NULL);
 			sprintf
 			(
-				time_str,"%lu\.%06lu", curr_time_tv.tv_sec, curr_time_tv.tv_usec
+				time_str,"%lu.%06lu", curr_time_tv.tv_sec, curr_time_tv.tv_usec
 			);
 			
 			double x;
@@ -161,7 +162,17 @@ int main()
 				perror("Error in send(): ");
 				break;
 			}
-			
+
+			size_t rec_size = 100;
+			char received[rec_size];
+			if (recv(client_socket,received, rec_size, MSG_DONTWAIT) > 0) {
+				printf("Message received: %s\n", received);
+				loggerSendLogMsg(logger,msg,sizeof(msg),"./test_log.txt",0,false);
+				printf("After log?\n");
+				if (strcmp(msg, "CLOSE")) {
+					loop_stop = true;
+				}
+			}
 
 			i += 5;
 			i = i % 360;

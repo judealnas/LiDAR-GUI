@@ -12,9 +12,7 @@ class TcpControl(baseClass, Ui_TcpControl):
     
     sig_broadcast_data = qtc.pyqtSignal(qtc.QByteArray)
     sig_log_event = qtc.pyqtSignal(str)
-    sig_relay_read = qtc.pyqtSignal(qtc.QByteArray)
-    sig_write_socket = qtc.pyqtSignal(str)
-       
+      
     def __init__(self, *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.setupUi(self)
@@ -22,8 +20,14 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.send_led.setMinimumSize(35,35)
         self.socket = QTcpSocket(self)
         
-        ## connecting GUI element signals
+        ## signals
         self.dis_conn_button.released.connect(self.connectSocket)
+        self.socket.readyRead.connect(self.readSocket)
+        self.socket.stateChanged.connect()
+
+    def socketMonitor(self, state: QTcpSocket.SocketState):
+        print(str(state))
+
 
     def connectSocket(self):
         timeout_ms = 30*1000
@@ -45,31 +49,12 @@ class TcpControl(baseClass, Ui_TcpControl):
             print("Connected")
             self.sig_log_event.emit(log_event_string+f"connectSocket::connected to {self.address.toIPv4Address}:{self.port}")
             self.panelConnected(True)
-            
-            #instantiate socket reader and thread
-            self.socket_reader = SocketReader(self.socket)
-            self.socket_reader_thread = qtc.QThread()
-            self.socket_reader.moveToThread(self.socket_reader_thread)
-            #connect socket reader signals
-            self.socket.readyRead.connect(self.socket_reader.getReadSlot()) #When data available, call appropriate method in SocketReader object
-            self.socket_reader.getReadReturnSig().connect(self.relaySocketRead) #signal emitted when data is received
-        
-            #instantiate socket writer and thread
-            self.socket_writer = SocketWriter(self.socket)
-            self.socket_writer_thread = qtc.QThread()
-            self.socket_writer.moveToThread(self.socket_writer_thread)
-
-            #connect socket writer signasl
-            self.socket_writer.getWriteReturnSig().connect(self.relaySocketWrite)
-            self.sig_write_socket.connect(self.socket_writer.getWriteSlot()) #connect signal to write method of SockeWriter
-            #start threads
-            self.socket_reader_thread.start()
-            self.socket_writer_thread.start()
         else:
+            print("Failed to Connect!", self.socket.error())
             self.sig_log_event.emit(log_event_string+f"connectSocket::failed to connect with {self.socket.error()}")
-        
-        self.dis_conn_button.setEnabled(True)
 
+        self.dis_conn_button.setEnabled(True)
+    
     def disconnectSocket(self):
         '''
         TO-DO: Depending on conditions, emit signals to exit the socket read/write threads
@@ -106,82 +91,32 @@ class TcpControl(baseClass, Ui_TcpControl):
 
         self.sig_log_event.emit(log_event_string+"panelConnected::entered state {}".format(str(state)))
 
-    def relaySocketRead(self,data_in: qtc.QByteArray):
-        '''
-        Slot that receives read data from socket reader thread. Broadcasts
-        data to modules subscribed to data via signals/slots. Also controls
-        receive LED indicator and emits logging signal
-        '''
+
+    def readSocket(self):
         self.receive_led.toggle()
-        self.sig_log_event.emit(log_event_string+"readSocket::received {}".format(data_in.data().decode('utf-8')))
+        data_in = self.socket.readAll()
+        self.sig_log_event.emit(log_event_string+"readSocket::received {}".format(str(data_in)))
         self.sig_broadcast_data.emit(data_in)
     
-    def relaySocketWrite(self,write_status: int):
-        '''
-        Slot that receives the status of write and emits logging event
-        '''
-        self.sig_log_event(log_event_string+"writeSocket::write_status={}".format(write_status))
+    def writeSocket(self, msg: str):
+        self.send_led.toggle()
+        write_status = self.socket.write(bytes(msg, 'utf-8'))
+        self.sig_log_event.emit(log_event_string+"writeSocket:: wrote {} with status {}".format(msg,write_status))
+
+    def receiveLedState(self, state):
+        self.receive_led.setChecked(state)
     
-    ####Accessor functions for modularity######
-    def getLogSignal(self) -> qtc.pyqtSignal:
+    def sendLedState(self, state):
+        self.send_led.setChecked(state)
+    
+    ## Accessor functions for modularity############
+    def getLogSignal(self):
         return self.sig_log_event
     
     def getBroadcastSignal(self) -> qtc.pyqtSignal:
         return self.sig_broadcast_data
-    
-    def getWriteSlot(self):
-        return self.socket_writer.getWriteSlot
-    ############################################
+    ###################################################
 
-class SocketReader(qtc.QObject):
-    '''
-    Class dedicated to simply reading data from a QTcpSocket object
-    and returning read data to the parent TcpContorl object. Meant to
-    be pushed into a separate thread
-    '''
-    sig_return = qtc.pyqtSignal(qtc.QByteArray)
-
-    def __init__(self,socket: QTcpSocket,*args,**kwargs):
-        super().__init__(*args,**kwargs)
-        self.socket = socket
-    
-    def readSocket(self):
-        data_in = self.socket.readAll()
-        self.sig_return.emit(data_in)
-    
-    ##Accessor functions for modularity
-    def getReadReturnSig(self):
-        return self.sig_return
-
-    def getReadSlot(self):
-        return self.readSocket
-
-class SocketWriter(qtc.QObject):
-    '''
-    Class dedicated to simply reading data from a QTcpSocket object
-    and returning read data to the parent TcpContorl object. Meant to
-    be pushed into a separate thread
-    '''
-    sig_return = qtc.pyqtSignal(int)
-
-    def __init__(self, socket:QTcpSocket, *args, **kwargs):
-        super().__init__(*args,**kwargs)
-        self.socket = socket
-    
-    def writeSocket(self,msg: str):
-        '''
-        Encode a string as bytes and write to socket.
-        TO-DO: depending on protocol, send message size first
-        '''
-        write_status = self.socket.write(bytes(msg,'utf-8'))
-        self.sig_return.emit(write_status)
-    
-    ##Accessor functions for modularity
-    def getWriteReturnSig(self):
-        return self.sig_return
-
-    def getWriteSlot(self):
-        return self.writeSocket
 
 if __name__ == "__main__":
     from StatusWindow import StatusWindow as MsgWindow
