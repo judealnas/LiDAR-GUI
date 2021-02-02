@@ -23,6 +23,10 @@ class TcpControl(baseClass, Ui_TcpControl):
         ## signals
         self.dis_conn_button.released.connect(self.connectSocket)
         self.socket.readyRead.connect(self.readSocket)
+        self.socket.stateChanged.connect()
+
+    def socketMonitor(self, state: QTcpSocket.SocketState):
+        print(str(state))
 
 
     def connectSocket(self):
