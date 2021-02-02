@@ -1,7 +1,7 @@
-import re
-import os
+from PyQt5 import QtCore as qtc
+from PyQt5.QtNetwork import QTcpSocket
+socket = QTcpSocket()
 
-string = ["mercury,venus\n","earth,mars\n","jupiter,saturn\n"]
-out = map(lambda x: x.replace('\n',''), string)
-out = map(lambda x: x.split(','), out)
-print(list(out)[0][1])
+meta = socket.staticMetaObject
+x = meta.enumerator(meta.indexOfEnumerator('SocketState')).valueToKey(6)
+print(socket.errorString())
