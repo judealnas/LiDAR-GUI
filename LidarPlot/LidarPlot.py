@@ -65,16 +65,6 @@ class LidarPlot(qtw.QWidget):
         self.clear_button.released.connect(self.clearData)
         self.mode_button.released.connect(self.changeMode)
 
-        #Thread signals
-        self.sig_read_first_n_lines.connect(self.data_logger.getReadFirstNSlot())
-        self.sig_read_last_n_lines.connect(self.data_logger.getReadLastNSlot())
-        self.sig_write_line.connect(self.data_logger.getWriteSlot())
-        ###################################################
-
-        #Allocate objects to threads and start
-        self.data_logger.moveToThread(self.data_logger_thread)
-        self.data_logger_thread.start()
-
     def changeMode(self):
         if self.plot_mode == LidarPlotMode.SCROLLING:
             self.plot_mode = LidarPlotMode.ALL
@@ -89,9 +79,9 @@ class LidarPlot(qtw.QWidget):
         
         #send data to LidarLogger
         data_log_str = str(epoch) + ',' + str(y)                                            
-        worker = ThreadWorker(self.data_logger.writeLine, data_log_str)                     #Instantiatie worker object
-        worker.sig_error.connect(lambda x: self.sig_log_event.emit("LidarLogger::" + x))    #connect callback signals
-        self.thread_pool.globalInstance().start(worker)                                     #start in any available thread
+        worker = ThreadWorker(self.data_logger.writeLine, data_log_str) #Instantiatie worker object
+        worker.signals.sig_error.connect(lambda x: self.sig_log_event.emit("LidarLogger::" + x))  #connect error callback signals    
+        self.thread_pool.globalInstance().start(worker) #start in any available thread
 
         #plot data
         self.buffer.append(y)
@@ -141,28 +131,37 @@ class ThreadWorker(qtc.QRunnable):
         as well as necessary arguments. Connect the provided signals if needed
     Then pass the object to QThreadpool.start method
     '''
-    sig_finished = qtc.pyqtSignal()     #signal to notify parent threads of task completion
-    sig_error = qtc.pyqtSignal(str)   #if error, return error data in tuples
-    sig_return = qtc.pyqtSignal(object) #signal to return parameters of any type
     
     def __init__(self, fn, *args, **kwargs):
         super().__init__()
         self.fn = fn
         self.args = args
         self.kwargs = kwargs
+        self.signals = ThreadWorkerSignals()
 
-    @pyqtSlot()
+    @qtc.pyqtSlot()
     def run(self): #overloaded function
         try:
             result = self.fn(*self.args, **self.kwargs)
         except:
             traceback.print_exc()
-            self.signals.error.emit(traceback.format_exc())
+            self.signals.sig_error.emit(traceback.format_exc())
         else:
-            self.signals.result.emit(result)  # Return the result of the processing
+            self.signals.sig_return.emit(result)  # Return the result of the processing
         finally:
-            self.signals.finished.emit()  # Done
+            self.signals.sig_finished.emit()  # Done
 
+class ThreadWorkerSignals(qtc.QObject):
+    '''
+    Holds the signals associated with ThreadWorker. ThreadWorker
+    does not inherit from QObject and thus cannot make custom signals
+    '''
+
+    sig_finished = qtc.pyqtSignal()     #signal to notify parent threads of task completion
+    sig_error = qtc.pyqtSignal(str)   #if error, return error data in tuples
+    sig_return = qtc.pyqtSignal(object) #signal to return parameters of any type
+    
+    
 class LidarLogger(qtc.QObject):
     '''
     Class that encapsulates all logging functinality
@@ -178,9 +177,7 @@ class LidarLogger(qtc.QObject):
             self.data_path = self.__defaultPath()   #...use the default path
         else:
             self.data_path = path    
-
-        if (not os.path.exists(self.data_path)):
-            os.makedirs(self.data_path)               
+            
 
     def __defaultPath(self):
         '''
@@ -194,6 +191,7 @@ class LidarLogger(qtc.QObject):
         with open(self.data_path, 'a', newline='') as f:
             write_status = f.write(msg + '\n')
         return write_status
+
     def readFirstNLines(self,n,delim=','):
         '''
         Returns the first n lines of self.data_path
