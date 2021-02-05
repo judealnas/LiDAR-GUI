@@ -139,16 +139,16 @@ int main()
 			double x;
 			x = sin(i*PI/180.0);
 
-			size_t msg_size = HEADERSIZE + 1 + TIME_STR_SIZE; 
+			size_t msg_size = HEADERSIZE + 2 + TIME_STR_SIZE; 
 			char msg[msg_size];
 			sprintf(msg,"%0*g_%s",HEADERSIZE, x, time_str);
-			msg_size = strlen(msg);
+			size_t true_msg_size = strlen(msg);
 
 			//send (msg_size - 1) bytes to omit string termination
-			ssize_t send_status = send(client_socket, msg, msg_size, MSG_NOSIGNAL);
+			ssize_t send_status = send(client_socket, msg, true_msg_size, MSG_NOSIGNAL);
 			if (send_status >= 0) 
 			{
-				if(send_status < msg_size) 
+				if(send_status < true_msg_size) 
 				{
 					printf("Not all data sent\n");
 				}
