@@ -8,6 +8,7 @@ import time
 import math
 import re
 from collections import deque
+import traceback
 
 #Ui_LidarPlot, baseClass = uic.loadUiType('Ui_LidarPlot.ui')
 #ui_builder = Ui_LidarPlot()
@@ -17,12 +18,6 @@ class LidarPlot(qtw.QWidget):
     #"External" signals meant to be connected to other modules
     sig_log_event = qtc.pyqtSignal(str)
     ##########################################################
-
-    #"Internal" signals to invoke methods of LidarLogger
-    sig_read_last_n_lines = qtc.pyqtSignal(int)
-    sig_read_first_n_lines = qtc.pyqtSignal(int)
-    sig_write_line = qtc.pyqtSignal(str)
-    #####################################################
 
     def __init__(self,*args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -61,6 +56,7 @@ class LidarPlot(qtw.QWidget):
         ## Instantiate logger object and threads
         self.data_logger = LidarLogger()
         self.data_logger_thread = qtc.QThread(self)
+        self.thread_pool = qtc.QThreadPool(self)
         #####################################
         
         ## Connecting signals ###############################
@@ -92,8 +88,10 @@ class LidarPlot(qtw.QWidget):
         y, epoch = self.parseData(data)
         
         #send data to LidarLogger
-        data_log_str = str(epoch) + ',' + str(y)
-        self.sig_write_line.emit(str(data_log_str))
+        data_log_str = str(epoch) + ',' + str(y)                                            
+        worker = ThreadWorker(self.data_logger.writeLine, data_log_str)                     #Instantiatie worker object
+        worker.sig_error.connect(lambda x: self.sig_log_event.emit("LidarLogger::" + x))    #connect callback signals
+        self.thread_pool.globalInstance().start(worker)                                     #start in any available thread
 
         #plot data
         self.buffer.append(y)
@@ -137,18 +135,38 @@ class LidarPlot(qtw.QWidget):
     ###############################
 
 class ThreadWorker(qtc.QRunnable):
+    '''
+    This class provides a generic way of using QThreadPool.
+    When initializing ThreadWorker, pass the function to execute in a thread
+        as well as necessary arguments. Connect the provided signals if needed
+    Then pass the object to QThreadpool.start method
+    '''
+    sig_finished = qtc.pyqtSignal()     #signal to notify parent threads of task completion
+    sig_error = qtc.pyqtSignal(str)   #if error, return error data in tuples
+    sig_return = qtc.pyqtSignal(object) #signal to return parameters of any type
     
     def __init__(self, fn, *args, **kwargs):
-        super().__init__(*args,**kwargs)
-        self.fn
+        super().__init__()
+        self.fn = fn
         self.args = args
         self.kwargs = kwargs
 
+    @pyqtSlot()
+    def run(self): #overloaded function
+        try:
+            result = self.fn(*self.args, **self.kwargs)
+        except:
+            traceback.print_exc()
+            self.signals.error.emit(traceback.format_exc())
+        else:
+            self.signals.result.emit(result)  # Return the result of the processing
+        finally:
+            self.signals.finished.emit()  # Done
+
 class LidarLogger(qtc.QObject):
     '''
-    Class responsible for logging all plotted data to CSV. Meant to run in separate thread
+    Class that encapsulates all logging functinality
     '''
-    sig_return = qtc.pyqtSignal(list)
 
     default_file = 'data_file.csv'
     default_folder = os.path.dirname(__file__)
@@ -156,21 +174,26 @@ class LidarLogger(qtc.QObject):
     def __init__(self,path=None,*args,**kwargs):
         super().__init__(*args,**kwargs)
         
-        if path == None:
-            self.data_path = self.__defaultPath()
+        if path == None:                            #if no path provided ...
+            self.data_path = self.__defaultPath()   #...use the default path
         else:
-            self.data_path = path
+            self.data_path = path    
+
+        if (not os.path.exists(self.data_path)):
+            os.makedirs(self.data_path)               
 
     def __defaultPath(self):
+        '''
+        Generates a path to a timestamped file with leaf default_file
+        '''
         default_path = os.path.join(self.default_folder, time.strftime("%Y_%m_%d") + self.default_file)
         default_path = self.findFileNum(default_path)
         return default_path
 
-    def writeLine(self,msg: str):
+    def writeLine(self,msg: str) -> int:
         with open(self.data_path, 'a', newline='') as f:
-            f.write(msg)
-            f.write('\n')
-
+            write_status = f.write(msg + '\n')
+        return write_status
     def readFirstNLines(self,n,delim=','):
         '''
         Returns the first n lines of self.data_path
@@ -184,9 +207,7 @@ class LidarLogger(qtc.QObject):
                 else:
                     #format data as 2D list
                     read_str = read_str.replace('\n','') #remove trailing newline
-                    out_list.append(read_str.split(delim))
-
-        self.sig_return.emit(out_list) #return 
+                    out_list.append(read_str.split(delim)) 
 
     def readLastNLines(self,n,delim=','):
         with open(self.data_path) as f:
@@ -196,11 +217,9 @@ class LidarLogger(qtc.QObject):
         out_list = map(lambda x: x.replace('\n',''), lastn)
         out_list = map(lambda x: x.split(delim),out_list)
 
-        self.sig_return.emit(out_list) #return
-
     def findFileNum(self,path):
         '''
-        if path exists append (#) just before file extension
+        if path exists append a number (#) just before file extension
         '''
         m = re.match(".*(\.).*$",path)
         ind_period = m.span(1)[0] #index of period before file extension
@@ -216,22 +235,6 @@ class LidarLogger(qtc.QObject):
         
         return path0
 
-    # Accessors for modularity ###############
-    def getReturnSig(self) -> qtc.pyqtSignal:
-        return self.sig_return
-
-    def getLogPath(self):
-        return self.data_path
-    
-    def getWriteSlot(self):
-        return self.writeLine
-    
-    def getReadFirstNSlot(self):
-        return self.readFirstNLines
-    
-    def getReadLastNSlot(self):
-        return self.readLastNLines
-    ##########################################
 
 class TimestampAxisItem(pg.AxisItem):
     def __init__(self,*args, **kwargs):
