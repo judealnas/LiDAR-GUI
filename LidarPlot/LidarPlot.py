@@ -26,7 +26,7 @@ class LidarPlot(qtw.QWidget):
         self.plot_widget = pg.PlotWidget(axisItems={'bottom': TimestampAxisItem(orientation='bottom')})
         self.clear_button = qtw.QPushButton('Clear')
         self.pause_button = qtw.QPushButton('Pause')
-        self.mode_button = qtw.QPushButton('Mode')
+        #self.mode_button = qtw.QPushButton('Mode')
         
         #main layout
         self.setLayout(qtw.QVBoxLayout())
@@ -36,21 +36,17 @@ class LidarPlot(qtw.QWidget):
         
         # add horizontal row of buttons
         self.button_layout = qtw.QHBoxLayout()
-        buttons = [self.pause_button, self.clear_button, self.mode_button]
-        for b in buttons:
-            self.button_layout.addWidget(b)
-        
+        self.button_layout.addWidget(self.pause_button)
+        self.button_layout.addWidget(self.clear_button)
+        #self.button_layout.addWidget(self.mode_button)
         self.layout().addLayout(self.button_layout)
-
-        #self.show()
         #############################
         
         ## Class instance variables
         self.buffer_size = 20 # number of data points to plot when scrolling
         self.x = []
-        self.buffer = []
-        self.plot_buffer = self.buffer.copy()
-        self.plot_mode = LidarPlotMode.SCROLLING
+        self.buffer = []        #retains the last buffer_size readings from server      
+        self.plot_buffer = self.buffer.copy()   #a subsection of buffer that is plotted
         self.data_curve = self.plot_widget.plot()   # create data curve object
 
         ## Instantiate logger object and threads
@@ -63,13 +59,8 @@ class LidarPlot(qtw.QWidget):
         #GUI signals
         self.pause_button.released.connect(self.updateData)
         self.clear_button.released.connect(self.clearData)
-        self.mode_button.released.connect(self.changeMode)
+        #self.mode_button.released.connect(self.changeMode)
 
-    def changeMode(self):
-        if self.plot_mode == LidarPlotMode.SCROLLING:
-            self.plot_mode = LidarPlotMode.ALL
-        else: 
-            self.plot_mode = LidarPlotMode.SCROLLING
 
     def plotData(self):
         self.data_curve.setData(self.x, self.buffer)
@@ -86,7 +77,7 @@ class LidarPlot(qtw.QWidget):
         #plot data
         self.buffer.append(y)
         self.x.append(epoch)
-        if (len(self.buffer) >= self.buffer_size) and self.plot_mode == LidarPlotMode.SCROLLING:
+        if (len(self.buffer) >= self.buffer_size):
             self.buffer.pop(0)
             self.x.pop(0)
             #self.x[:-1] = self.x[1:] #rotate values left
@@ -248,10 +239,6 @@ class TimestampAxisItem(pg.AxisItem):
             tick_str.append(out)
         
         return tick_str
-            
-class LidarPlotMode(Enum):
-    SCROLLING = auto()  # 1
-    ALL = auto()        # 2
     
 
 if __name__ == '__main__':
