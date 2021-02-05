@@ -136,6 +136,14 @@ class LidarPlot(qtw.QWidget):
         return self.sig_log_event
     ###############################
 
+class ThreadWorker(qtc.QRunnable):
+    
+    def __init__(self, fn, *args, **kwargs):
+        super().__init__(*args,**kwargs)
+        self.fn
+        self.args = args
+        self.kwargs = kwargs
+
 class LidarLogger(qtc.QObject):
     '''
     Class responsible for logging all plotted data to CSV. Meant to run in separate thread
