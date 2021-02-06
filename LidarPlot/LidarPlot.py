@@ -26,6 +26,7 @@ class LidarPlot(qtw.QWidget):
         self.plot_widget = pg.PlotWidget(axisItems={'bottom': TimestampAxisItem(orientation='bottom')})
         self.clear_button = qtw.QPushButton('Clear')
         self.pause_button = qtw.QPushButton('Pause')
+        self.pause_button.setCheckable(True)
         #self.mode_button = qtw.QPushButton('Mode')
         
         #main layout
@@ -43,7 +44,9 @@ class LidarPlot(qtw.QWidget):
         #############################
         
         ## Class instance variables
-        self.buffer_size = 20 # number of data points to plot when scrolling
+        self.pause_flag = False
+        self.plot_points = 80 # number of points to maintain on scrolling plot
+        self.buffer_size = 200 # number of data points to hold in memory
         self.x = []
         self.buffer = []        #retains the last buffer_size readings from server      
         self.plot_buffer = self.buffer.copy()   #a subsection of buffer that is plotted
@@ -57,15 +60,19 @@ class LidarPlot(qtw.QWidget):
         
         ## Connecting signals ###############################
         #GUI signals
-        self.pause_button.released.connect(self.updateData)
+        self.pause_button.toggled.connect(self.setPauseFlag)
         self.clear_button.released.connect(self.clearData)
         #self.mode_button.released.connect(self.changeMode)
 
+    def setPauseFlag(self,state: bool):
+        self.pause_flag = state
 
     def plotData(self):
-        self.data_curve.setData(self.x, self.buffer)
+        if (not self.pause_flag):
+            self.data_curve.setData(self.x[-self.plot_points:], self.buffer[-self.plot_points:])
     
     def updateData(self, data: qtc.QByteArray):
+        #parse byte data received
         y, epoch = self.parseData(data)
         
         #send data to LidarLogger
@@ -74,18 +81,15 @@ class LidarPlot(qtw.QWidget):
         worker.signals.sig_error.connect(lambda x: self.sig_log_event.emit("LidarLogger::" + x))  #connect error callback signals    
         self.thread_pool.globalInstance().start(worker) #start in any available thread
 
-        #plot data
-        self.buffer.append(y)
+    
+        #add data to buffers
+        self.buffer.append(y)   #most recent data is at end
         self.x.append(epoch)
         if (len(self.buffer) >= self.buffer_size):
             self.buffer.pop(0)
             self.x.pop(0)
-            #self.x[:-1] = self.x[1:] #rotate values left
-            #self.x[-1] = (self.x[-1] + 1) #add new larger value
         else:
             pass
-            #non-scrolling or insufficient data points for scrolling
-            #self.x = list(range(len(self.buffer)))
 
         self.plotData()
 
