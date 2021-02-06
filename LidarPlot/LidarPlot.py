@@ -113,6 +113,9 @@ class LidarPlot(qtw.QWidget):
     # Accessor methods for modularity
     def getLogSignal(self):
         return self.sig_log_event
+    
+    def getDataSlot(self):
+        return self.updateData
     ###############################
 
 class ThreadWorker(qtc.QRunnable):

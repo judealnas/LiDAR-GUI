@@ -39,10 +39,10 @@ class MainWindow(qtw.QMainWindow):
         self.setCentralWidget(self.central_widget)
 
         ## connect signals
-        self.tcp_control.getBroadcastSignal().connect(self.lidar_plot.updateData)
-        self.tcp_control.getLogSignal().connect(self.status_window.addMsg)
-        self.lidar_plot.getLogSignal().connect(self.status_window.addMsg)
-        self.msg_control.getSendMsgSignal().connect(self.tcp_control.writeSocket)
+        self.tcp_control.getBroadcastSignal().connect(self.lidar_plot.getDataSlot())
+        self.tcp_control.getLogSignal().connect(self.status_window.getAddMsgSlot())
+        self.lidar_plot.getLogSignal().connect(self.status_window.getAddMsgSlot())
+        self.msg_control.getSendMsgSignal().connect(self.tcp_control.getWriteSocketSlot())
 
         
         

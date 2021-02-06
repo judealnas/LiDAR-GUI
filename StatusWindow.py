@@ -91,6 +91,8 @@ class StatusWindow(qtw.QPlainTextEdit):
             out.write(''.join(['-']*10))
             out.write('\n')
 
+    def getAddMsgSlot(self):
+        return self.addMsg
 
 if __name__ == "__main__":
     app = qtw.QApplication(sys.argv)

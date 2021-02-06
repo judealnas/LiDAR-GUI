@@ -123,6 +123,9 @@ class TcpControl(baseClass, Ui_TcpControl):
     
     def getBroadcastSignal(self) -> qtc.pyqtSignal:
         return self.sig_broadcast_data
+
+    def getWriteSocketSlot(self):
+        return self.writeSocket
     ###################################################
 
 
