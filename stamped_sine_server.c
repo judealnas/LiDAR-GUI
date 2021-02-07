@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
+#include <czmq.h>
 #include "Threaded Logger/logger.h"
 
 #define PI 3.14159265
@@ -64,7 +65,11 @@ size_t getTimeString(char* str_result, size_t str_size, char delim)
 
 int main() 
 {
-	
+	//Initializing ZMQ sockets
+	void *context = zmq_ctx_new();
+	void *publisher = zmq_socket(context, ZMQ_PUB);
+	zmq_bind(publisher,"tcp://localhost:49217");
+
 	//Initializing logging thread
 	logger_t* logger = loggerCreate(30);
 	pthread_t logger_tid;
@@ -122,7 +127,7 @@ int main()
 			
 		char time_str[TIME_STR_SIZE];
 		int i = 0;
-		useconds_t delay =100000; //100 ms
+		useconds_t delay =1000000; //1000 ms
 		printf("Entering loop...\n");
 		while (!loop_stop)
 		{
@@ -146,6 +151,8 @@ int main()
 
 			//send (msg_size - 1) bytes to omit string termination
 			ssize_t send_status = send(client_socket, msg, true_msg_size, MSG_NOSIGNAL);
+			int zmq_send_status = zmq_send(publisher, msg, true_msg_size,0);
+			printf("ZMQ Send Status = %d\n", zmq_send_status);
 			if (send_status >= 0) 
 			{
 				if(send_status < true_msg_size) 
@@ -189,6 +196,8 @@ int main()
 	} // end while (1)
 	loggerSendCloseMsg(logger,0,true);
 	pthread_join(logger_tid,NULL);
+	zmq_close(publisher);
+	zmq_ctx_destroy(context);
 	close(server_socket);
 	printf("Exitted\n");
 	return 0;

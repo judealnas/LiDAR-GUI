@@ -2,8 +2,9 @@ import sys
 from os.path import dirname, join
 sys.path.insert(0,dirname(dirname(__file__)))
 from PyQt5.QtNetwork import QTcpSocket, QHostAddress 
-from PyQt5 import QtCore as qtc, QtWidgets as qtw, uic
+from PyQt5 import QtCore as qtc, QtWidgets as qtw, uic, QtNetwork as qtn
 import random
+import zmq
 
 Ui_TcpControl, baseClass = uic.loadUiType(join(dirname(__file__),'Ui_TcpControl.ui'))
 log_event_string = "{}::".format(__name__)
@@ -19,12 +20,27 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.receive_led.setMinimumSize(35,35)
         self.send_led.setMinimumSize(35,35)
         self.socket = QTcpSocket(self)
+        self.zmq_context = zmq.Context()
+        self.zmq_socket = self.zmq_context.socket(zmq.SUB)
+        self.zmq_notifier = qtc.QSocketNotifier(self.zmq_socket.getsockopt(zmq.FD), qtc.QSocketNotifier.Read, self)
         
         ## signals
         self.dis_conn_button.released.connect(self.connectSocket)
         self.socket.readyRead.connect(self.readSocket) #automatically read data from socket whenever availables
         self.socket.stateChanged.connect(self.logSocketStateChage)  #for debugging, track state of socket
         self.socket.errorOccurred.connect(self.logSocketError)  #log any socket errors as they occur
+        self.zmq_notifier.activated.connect(self.zmqActivity)
+
+    def zmqActivity(self):
+        print("Notifer")
+        self.zmq_notifier.setEnabled(False)
+        print(self.zmq_socket.getsockopt(zmq.EVENTS))
+        if (self.zmq_socket.getsockopt(zmq.EVENTS) & zmq.POLLIN):
+            while (self.zmq_socket.getsockopt(zmq.EVENTS) & zmq.POLLIN):
+                rec_data = self.zmq_socket.recv()
+                print("ZMQ Received: {}".format(rec_data.decode()))
+            
+        self.zmq_notifier.setEnabled(True)
 
     def logSocketError(self, value:int):
         error_str = self.socket.errorString()
@@ -48,6 +64,9 @@ class TcpControl(baseClass, Ui_TcpControl):
         
         #save port
         self.port = int(self.port_lineedit.text())
+        
+        #zmq socket
+        zmq_connect_status = self.zmq_socket.connect("tcp://localhost:49217")
         
         # connect socket
         self.socket.connectToHost(self.address, self.port)
