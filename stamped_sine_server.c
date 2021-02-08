@@ -68,7 +68,9 @@ int main()
 	//Initializing ZMQ sockets
 	void *context = zmq_ctx_new();
 	void *publisher = zmq_socket(context, ZMQ_PUB);
-	zmq_bind(publisher,"tcp://localhost:49217");
+	if(zmq_bind(publisher,"tcp://127.0.0.1:49217") != 0) {
+		perror("zmq_bind() error:");
+	}
 
 	//Initializing logging thread
 	logger_t* logger = loggerCreate(30);
@@ -150,15 +152,12 @@ int main()
 			size_t true_msg_size = strlen(msg);
 
 			//zmq socket send
-			zmq_msg_t message;
-			zmq_msg_init_size(&message, true_msg_size);
-			memcpy(zmq_msg_data(&message), msg, true_msg_size);
-			int rc = zmq_msg_send(&message,publisher,0);
-			zmq_msg_close(&message);
+			if (zmq_send(publisher,msg, true_msg_size,0) < 0) {
+				perror("zmq_send() Error:");
+			}
 
 			//standard socket send
 			ssize_t send_status = send(client_socket, msg, true_msg_size, MSG_NOSIGNAL);
-			printf("ZMQ Send Status = %d\n", rc);
 			if (send_status >= 0) 
 			{
 				if(send_status < true_msg_size) 

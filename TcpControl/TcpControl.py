@@ -39,7 +39,7 @@ class TcpControl(baseClass, Ui_TcpControl):
         if (self.zmq_socket.getsockopt(zmq.EVENTS) & zmq.POLLIN):
             while (self.zmq_socket.getsockopt(zmq.EVENTS) & zmq.POLLIN):
                 rec_data = self.zmq_socket.recv_string()
-                print("ZMQ Received: {}".format(rec_data.decode()))
+                print("ZMQ Received: {}".format(rec_data))
             
         self.zmq_notifier.setEnabled(True)
         print("Notifer Enabled")
