@@ -22,6 +22,7 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.socket = QTcpSocket(self)
         self.zmq_context = zmq.Context()
         self.zmq_socket = self.zmq_context.socket(zmq.SUB)
+        self.zmq_socket.setsockopt_string(zmq.SUBSCRIBE,'')
         self.zmq_notifier = qtc.QSocketNotifier(self.zmq_socket.getsockopt(zmq.FD), qtc.QSocketNotifier.Read, self)
         
         ## signals
@@ -37,10 +38,12 @@ class TcpControl(baseClass, Ui_TcpControl):
         print(self.zmq_socket.getsockopt(zmq.EVENTS))
         if (self.zmq_socket.getsockopt(zmq.EVENTS) & zmq.POLLIN):
             while (self.zmq_socket.getsockopt(zmq.EVENTS) & zmq.POLLIN):
-                rec_data = self.zmq_socket.recv()
+                rec_data = self.zmq_socket.recv_string()
                 print("ZMQ Received: {}".format(rec_data.decode()))
             
         self.zmq_notifier.setEnabled(True)
+        print("Notifer Enabled")
+
 
     def logSocketError(self, value:int):
         error_str = self.socket.errorString()

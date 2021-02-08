@@ -149,10 +149,16 @@ int main()
 			sprintf(msg,"%0*g_%s",HEADERSIZE, x, time_str);
 			size_t true_msg_size = strlen(msg);
 
-			//send (msg_size - 1) bytes to omit string termination
+			//zmq socket send
+			zmq_msg_t message;
+			zmq_msg_init_size(&message, true_msg_size);
+			memcpy(zmq_msg_data(&message), msg, true_msg_size);
+			int rc = zmq_msg_send(&message,publisher,0);
+			zmq_msg_close(&message);
+
+			//standard socket send
 			ssize_t send_status = send(client_socket, msg, true_msg_size, MSG_NOSIGNAL);
-			int zmq_send_status = zmq_send(publisher, msg, true_msg_size,0);
-			printf("ZMQ Send Status = %d\n", zmq_send_status);
+			printf("ZMQ Send Status = %d\n", rc);
 			if (send_status >= 0) 
 			{
 				if(send_status < true_msg_size) 
