@@ -5,6 +5,7 @@ from PyQt5.QtNetwork import QTcpSocket, QHostAddress
 from PyQt5 import QtCore as qtc, QtWidgets as qtw, uic, QtNetwork as qtn
 import random
 import zmq
+import zmq.utils
 
 Ui_TcpControl, baseClass = uic.loadUiType(join(dirname(__file__),'Ui_TcpControl.ui'))
 log_event_string = "{}::".format(__name__)
@@ -24,7 +25,7 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.zmq_socket = self.zmq_context.socket(zmq.SUB)
         self.zmq_socket.setsockopt_string(zmq.SUBSCRIBE,'')
         self.zmq_notifier = qtc.QSocketNotifier(self.zmq_socket.getsockopt(zmq.FD), qtc.QSocketNotifier.Read, self)
-        
+
         ## signals
         self.dis_conn_button.released.connect(self.connectSocket)
         self.socket.readyRead.connect(self.readSocket) #automatically read data from socket whenever availables
@@ -147,7 +148,25 @@ class TcpControl(baseClass, Ui_TcpControl):
         return self.sig_broadcast_data
     ###################################################
 
+class ZmQtSocket(qtc.QObject):
+    def __init__(self, context: zmq.Context, socket_type, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.socket = context.socket(socket_type)
+        self.monitor_thread = qtc.QThread(self)
 
+class ZmqSocketMonitor(qtc.QObject):
+    
+    sig_event = qtc.pyqtSignal(object)
+    
+    def __init__(self,socket: zmq.Socket,*args,**kwargs):
+        super().__init__(*args, **kwargs)
+        self.monitor_socket = socket
+        self.__monitor()
+
+    def __monitor(self):
+        status = 0
+        while (1):
+            self.monitor_socket.recv
 if __name__ == "__main__":
     from StatusWindow import StatusWindow as MsgWindow
     
