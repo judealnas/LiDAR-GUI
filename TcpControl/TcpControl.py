@@ -6,6 +6,7 @@ from PyQt5 import QtCore as qtc, QtWidgets as qtw, uic, QtNetwork as qtn
 import random
 import zmq
 import zmq.utils
+import ZmqMonitor
 
 Ui_TcpControl, baseClass = uic.loadUiType(join(dirname(__file__),'Ui_TcpControl.ui'))
 log_event_string = "{}::".format(__name__)
