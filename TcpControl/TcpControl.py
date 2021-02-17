@@ -168,6 +168,7 @@ class ZmqSocketMonitor(qtc.QObject):
         status = 0
         while (1):
             self.monitor_socket.recv
+            
 if __name__ == "__main__":
     from StatusWindow import StatusWindow as MsgWindow
     
