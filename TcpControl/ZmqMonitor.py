@@ -40,6 +40,7 @@ class ZmqSocketMonitor(qtc.QObject):
             if name.startswith('EVENT_'):
                 value = getattr(zmq,name)
                 self.EVENT_MAP[value] = name
+        print("{}".format(self.EVENT_MAP))
 
     def monitorSocket(self, monitor_socket: "zmq.Socket", monitor_signals: "ZmqSocketMonitorSignals"):
         '''
@@ -52,6 +53,7 @@ class ZmqSocketMonitor(qtc.QObject):
             evt = recv_monitor_message(monitor_socket)
             evt.update({'description': self.EVENT_MAP[evt['event']]})
             print("Event: {}".format(evt))
+            monitor_signals.zmq_signal_dict[evt['event']].emit(evt)
             if evt['event'] == zmq.EVENT_MONITOR_STOPPED:
                 break
         
@@ -59,44 +61,80 @@ class ZmqSocketMonitor(qtc.QObject):
 
 class ZmqSocketMonitorSignals(qtc.QObject):
     '''
-    Define signals passed as argument to the threaded monitoring loop
+    Define signals passed as argument to the threaded monitoring loop.
+    Signals with dict datatypes pass the dict returned by recv_monitor_message,
+    which is of the form {'event': int, 'value': int, 'endpoint': bytes, 'description': str}
     '''
-    sig_connected = qtc.pyqtSignal()
-    sig_connect_delayed = qtc.pyqtSignal()
-    sig_connect_retired = qtc.pyqtSignal()
-    sig_listening = qtc.pyqtSignal()
-    sig_bind_failed = qtc.pyqtSignal()
-    sig_accepted = qtc.pyqtSignal()
-    sig_accept_failed = qtc.pyqtSignal()
-    sig_accept_failed = qtc.pyqtSignal()
-    sig_closed = qtc.pyqtSignal()
-    sig_close_failed = qtc.pyqtSignal()
-    sig_disconnected = qtc.pyqtSignal()
-    sig_monitor_stopped = qtc.pyqtSignal()
-    sig_handshake_failed = qtc.pyqtSignal()
-    sig_handhake  = qtc.pyqtSignal()
-    sig_handshake_failed_auth = qtc.pyqtSignal()
+    #
+    sig_connected = qtc.pyqtSignal(dict)
+    sig_connect_delayed = qtc.pyqtSignal(dict)
+    sig_connect_retired = qtc.pyqtSignal(dict)
+    sig_listening = qtc.pyqtSignal(dict)
+    sig_bind_failed = qtc.pyqtSignal(dict)
+    sig_accepted = qtc.pyqtSignal(dict)
+    sig_accept_failed = qtc.pyqtSignal(dict)
+    sig_accept_failed = qtc.pyqtSignal(dict)
+    sig_closed = qtc.pyqtSignal(dict)
+    sig_close_failed = qtc.pyqtSignal(dict)
+    sig_disconnected = qtc.pyqtSignal(dict)
+    sig_monitor_stopped = qtc.pyqtSignal(dict)
+    sig_handshake_failed = qtc.pyqtSignal(dict)
+    sig_handshake_failed_proto = qtc.pyqtSignal(dict)
+    sig_handhake_succeeded  = qtc.pyqtSignal(dict)
+    sig_handshake_failed_auth = qtc.pyqtSignal(dict)
 
     sig_read_ready = qtc.pyqtSignal()
     sig_error_occurred = qtc.pyqtSignal(dict)
+
+    #dictionary associating a ZMQ socket event id with a PyQt5 signal
+    zmq_signal_dict = {
+        1: sig_connected,
+        2: sig_connect_delayed,
+        4: sig_connect_retired,
+        8: sig_listening,
+        16: sig_bind_failed,
+        32: sig_accepted,
+        64: sig_accept_failed,
+        128: sig_closed,
+        256: sig_close_failed,
+        512: sig_disconnected,
+        1024: sig_monitor_stopped,
+        2048: sig_handshake_failed,
+        8192: sig_handshake_failed_proto,
+        4096: sig_handhake_succeeded,
+        16384: sig_handshake_failed_auth
+    }
     
 
 if __name__ == "__main__":
+    s = ZmqSocketMonitor(10)
+    s.generateEventDict()
+    '''
     context = zmq.Context()
     publisher = context.socket(zmq.PUB)
-
     subscriber = context.socket(zmq.SUB)
+
+    monitor = ZmqSocketMonitor(subscriber)
+    subscriber.connect("tcp://localhost:49217")
     subscriber.setsockopt_string(zmq.SUBSCRIBE, '')
-    monitor2 = ZmqSocketMonitor(publisher)
-    monitor1 = ZmqSocketMonitor(subscriber)
-    time.sleep(1)
-    subscriber.connect('tcp://localhost:49417')
-    time.sleep(1)
-    publisher.bind('tcp://127.0.0.1:49417')
+
+    #publisher.bind('tcp://*:49217')
+    end_time = time.time() + 60
+
+    i = 0
+    while (time.time() < end_time):
+        print("before rec")
+        print(subscriber.recv_string())
+        print("after rec")
+        #publisher.send_string(str(i))
+        i += 1
+        time.sleep(0.5)
+
+    subscriber.close()
+    #subscriber.disconnect("tcp://localhost:49217")
+
+    #publisher.close()
     time.sleep(5)
-    subscriber.disconnect("tcp://localhost:49417")
-    time.sleep(5)
-    publisher.disable_monitor()
-    time.sleep(1)
-    publisher.disconnect("tcp://127.0.0.1:49417")
-    time.sleep(1)
+    context.destroy()
+    
+'''
