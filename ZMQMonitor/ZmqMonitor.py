@@ -206,7 +206,7 @@ if __name__ == "__main__":
             
             self.test()
             print("end")
-            self.quit()
+            
             
         def test(self):
             end_time = time.time() + 10
