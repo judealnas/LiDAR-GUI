@@ -65,10 +65,17 @@ size_t getTimeString(char* str_result, size_t str_size, char delim)
 
 int main() 
 {
+	//print ZMQ version
+	int major;
+	int minor;
+	int patch;
+	zmq_version(&major, &minor, &patch);
+	printf("ZMQ Version: %d.%d.%d\n", major, minor, patch);
+
 	//Initializing ZMQ sockets
 	void *context = zmq_ctx_new();
-	void *publisher = zmq_socket(context, ZMQ_PUB);
-	if(zmq_bind(publisher,"tcp://127.0.0.1:49217") != 0) {
+	void *publisher = zmq_socket(context, ZMQ_PAIR); //Create PAIR socket for bi-directional, 1-to-1 communication
+	if(zmq_bind(publisher,"tcp://*:49217") != 0) {
 		perror("zmq_bind() error:");
 	}
 
@@ -142,19 +149,24 @@ int main()
 			(
 				time_str,"%lu.%06lu", curr_time_tv.tv_sec, curr_time_tv.tv_usec
 			);
-			
+			printf("Got time string\n");
+
 			double x;
 			x = sin(i*PI/180.0);
+			printf("calculated sine\n");
 
 			size_t msg_size = HEADERSIZE + 2 + TIME_STR_SIZE; 
 			char msg[msg_size];
 			sprintf(msg,"%0*g_%s",HEADERSIZE, x, time_str);
 			size_t true_msg_size = strlen(msg);
+			printf("built msg string\n");
+
 
 			//zmq socket send
 			if (zmq_send(publisher,msg, true_msg_size,0) < 0) {
 				perror("zmq_send() Error:");
 			}
+			printf("zmq sent\n");
 
 			//standard socket send
 			ssize_t send_status = send(client_socket, msg, true_msg_size, MSG_NOSIGNAL);
@@ -180,6 +192,7 @@ int main()
 				perror("Error in send(): ");
 				break;
 			}
+			printf("sent\n");
 
 			size_t rec_size = 100;
 			char received[rec_size];
@@ -192,6 +205,19 @@ int main()
 					loop_stop = true;
 				}
 			}
+			printf("rec\n");
+			
+			zmq_msg_t rec_msg;
+			zmq_msg_init(&rec_msg); 
+			if (zmq_msg_recv(&rec_msg, publisher, ZMQ_DONTWAIT) < 0) {
+				if (errno != EAGAIN) perror("zmq_msg_recv() ERROR: ");
+			}
+			else {
+				char* zmq_received = zmq_msg_data(&rec_msg);
+				printf("zmq_received=%s\n",zmq_received);
+			}
+			zmq_msg_close(&rec_msg);
+			printf("zmq_req\n");
 
 			i += 5;
 			i = i % 360;

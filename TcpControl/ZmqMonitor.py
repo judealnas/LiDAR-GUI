@@ -4,7 +4,6 @@ import sys
 from os.path import dirname
 sys.path.append(dirname(dirname(__file__)))
 from PyQt5 import QtCore as qtc, QtWidgets as qtw
-from QtThreadWorker import QtThreadWorker
 import traceback
 import time
 
@@ -142,6 +141,13 @@ class ZmqMonitor(qtc.QObject):
         self.socket = socket    #save ZMQ socket object
         self.monitor_socket = socket.get_monitor_socket()   #get monitoring socket PAIR 
 
+        #signal pass throughs; these events will emit the error signal, passing event data
+        self.sig_bind_failed.connect(self.sig_error_occurred.emit)
+        self.sig_accept_failed.connect(self.sig_error_occurred.emit)
+        self.sig_handshake_failed.connect(self.sig_error_occurred.emit)
+        self.sig_handshake_failed_auth.connect(self.sig_error_occurred.emit)
+        self.sig_handshake_failed_proto.connect(self.sig_error_occurred.emit)
+
          
     def generateEventDict(self) -> dict:
         '''
@@ -156,6 +162,11 @@ class ZmqMonitor(qtc.QObject):
         
         return EVENT_MAP
 
+    def startWork(self):
+        #self.monitor_socket_notifier = qtc.QSocketNotifier(zmq.getsockopt(zmq.FD), qtc.QSocketNotifier.Read, self)
+        #self.monitor_socket_notifier.activated.connect(self.monitorSocket)
+        pass
+
     @qtc.pyqtSlot()
     def monitorSocket(self):
         '''
@@ -164,11 +175,11 @@ class ZmqMonitor(qtc.QObject):
         according to received events
         '''
         print("Hello from thread {}".format(qtc.QThread.currentThreadId()))
-        while self.monitor_socket.poll():
-            evt = recv_monitor_message(self.monitor_socket, zmq.NOBLOCK)
-            evt.update({'description': self.EVENT_MAP[evt['event']]})
+        while True: 
+            evt = recv_monitor_message(self.monitor_socket) #block until message available
+            evt.update({'description': self.EVENT_MAP[evt['event']]}) #add description to received tuple
             print("Event: {}".format(evt))
-            self.zmq_signal_dict[evt['event']].emit({})
+            self.zmq_signal_dict[evt['event']].emit(evt)    #use 'event' key to get proper signal; emit signal, passing event data
             if evt['event'] == zmq.EVENT_MONITOR_STOPPED:
                 break
         
@@ -183,14 +194,18 @@ if __name__ == "__main__":
             self.context = zmq.Context()
             self.publisher = self.context.socket(zmq.PUB)
             self.subscriber = self.context.socket(zmq.SUB)
-
+            self.subscriber_notifier = qtc.QSocketNotifier(self.subscriber.getsockopt(zmq.FD), qtc.QSocketNotifier.Read)
+            
             self.monitor = ZmqMonitor(self.subscriber)
             self.monitor_thread = qtc.QThread(self)
             self.monitor.moveToThread(self.monitor_thread)
-            self.monitor.sig_connected.connect(lambda x: print("CONNECTED SIGNAL EMITTED"))
-            self.monitor.sig_connect_delayed.connect(lambda x: print("CONNECT DELAY SIGNAL EMITTED"))
-            self.monitor.sig_handhake_succeeded.connect(lambda x: print("HANDSHAKE SUCCESS SIGNAL EMITTED"))
-            self.monitor.sig_monitor_stopped.connect(lambda x: print("MONITOR STOP SIGNAL EMITTED"))
+            
+            self.subscriber_notifier.activated.connect(self.socketActivity)
+            self.monitor.sig_connected.connect(lambda x: print(f"CONNECTED SIGNAL EMITTED {x}"))
+            self.monitor.sig_connect_delayed.connect(lambda x: print(f"CONNECT DELAY SIGNAL EMITTED {x}"))
+            self.monitor.sig_handhake_succeeded.connect(lambda x: print(f"HANDSHAKE SUCCESS SIGNAL EMITTED {x}"))
+            self.monitor.sig_monitor_stopped.connect(lambda x: print(f"MONITOR STOP SIGNAL EMITTED {x}"))
+            self.monitor.sig_error_occurred.connect(lambda x: print(f"ERROR SIGNAL EMITTED: {x}"))
             self.sig_start_monitor.connect(self.monitor.monitorSocket)
             self.monitor_thread.finished.connect(self.monitor.deleteLater)
             self.monitor_thread.started.connect(self.monitor.monitorSocket)
@@ -204,27 +219,32 @@ if __name__ == "__main__":
             self.subscriber.setsockopt_string(zmq.SUBSCRIBE, '')
             #self.publisher.bind('tcp://*:49217')
             
-            self.test()
+            qtc.QTimer.singleShot(10000, self.quitThread)
             print("end")
             
             
-        def test(self):
-            end_time = time.time() + 10
+        def socketActivity(self):
+            self.subscriber_notifier.setEnabled(False)
 
-            i = 0
-            while (time.time() < end_time):
-                print(self.subscriber.recv_string())
-                #publisher.send_string(str(i))
-                i += 1
-                #time.sleep(0.5)
+            if (self.subscriber.getsockopt(zmq.EVENTS) & zmq.POLLIN):
+                while (self.subscriber.getsockopt(zmq.EVENTS) & zmq.POLLIN):
+                    print(self.subscriber.recv_string())
+                
+            self.subscriber_notifier.setEnabled(True)
 
+        def quitThread(self):            
+            print("about to close")
+            self.subscriber_notifier.setEnabled(False)
             self.subscriber.close()
             #self.subscriber.disconnect("tcp://localhost:49217")
-
             #publisher.close()
+            print("about to quit thread")
             self.monitor_thread.quit()
+            print("about to wait for thread")
             self.monitor_thread.wait()
+            print("about to destroy context")
             self.context.destroy()
+            sys.exit()
     
     app = MainWindow(sys.argv)
     sys.exit(app.exec_())

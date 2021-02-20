@@ -11,21 +11,24 @@ class Worker(qtc.QObject):
         super().__init__(*args, **kwargs)
         self.angle = 0
         
-        self.hold = True
+        self.hold = False
 
     def releaseHold(self):
+        print("releaseHold")
         self.hold = False
 
     def doWork(self):
         self.timer = qtc.QTimer()
         self.timer.timeout.connect(self.releaseHold)
         self.timer.start(1000)
-        while not self.hold: 
+        print("doWork", self.hold)
+        while (not self.hold): 
             print("working")
             data = math.sin(self.angle)
             self.angle = self.angle + math.pi/2
             self.sig_return.emit(data)
             self.hold = True
+            
 
 class Test(qtc.QObject):
     sig_start = qtc.pyqtSignal()

@@ -20,7 +20,6 @@ class Main(qtc.QObject):
         self.monitor_thread = qtc.QThread()
 
 
-
     def readData(self):
         self.socket_notifier.setEnabled(False)
 
