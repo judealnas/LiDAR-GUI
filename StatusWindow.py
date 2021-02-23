@@ -57,15 +57,6 @@ class StatusWindow(qtw.QPlainTextEdit):
         if val:
             self.moveCursor(qtg.QTextCursor.End)
 
-
-    @qtc.pyqtSlot(qtc.QByteArray)
-    def receiveData(self, qdata):
-        '''
-        Slot used to receive data from external modules
-        '''
-        data = str(qdata)
-        self.sig_add_msg.emit(data)
-
     def addMsg(self,text):
         '''
         Prefix timestamp, add to widget, and queue for logging
@@ -92,6 +83,8 @@ class StatusWindow(qtw.QPlainTextEdit):
             out.write(''.join(['-']*10))
             out.write('\n')
 
+    def getAddMsgSlot(self):
+        return self.addMsg
 
 if __name__ == "__main__":
     app = qtw.QApplication(sys.argv)

@@ -1,6 +1,4 @@
-from PyQt5 import QtCore as qtc
-from PyQt5 import QtWidgets as qtw
-from PyQt5 import QtGui as qtg
+from PyQt5 import QtCore as qtc, QtWidgets as qtw, QtGui as qtg 
 
 class MsgControl(qtw.QWidget):
 
@@ -8,13 +6,13 @@ class MsgControl(qtw.QWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        
         self.send_button = qtw.QPushButton('SEND', self)
         self.send_button.setSizePolicy(qtw.QSizePolicy(qtw.QSizePolicy.Minimum,qtw.QSizePolicy.Minimum))
         self.send_lineedit = qtw.QLineEdit(self)
         self.rec_lineedit = qtw.QLineEdit(self)
         self.rec_lineedit.setEnabled(False)
-
+        
         # palce lineedits together in form
         self.form_layout = qtw.QFormLayout()
         self.form_layout.addRow('Message',self.send_lineedit)
@@ -27,9 +25,10 @@ class MsgControl(qtw.QWidget):
 
         #connect signals
         self.send_button.released.connect(self.sendMsg)
+        self.send_lineedit.returnPressed.connect(self.sendMsg)
         self.sig_send_msg.connect(self.setReceiveText) #DEBUG
 
-        self.show()
+        #self.show()
 
     def sendMsg(self):
         self.sig_send_msg.emit(self.send_lineedit.text())
