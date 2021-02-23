@@ -137,7 +137,7 @@ int main()
 		char time_str[TIME_STR_SIZE];
 		int i = 0;
 		useconds_t delay =100000; //1000 ms
-		printf("Entering loop...\n");
+		//printf("Entering loop...\n");
 		while (!loop_stop)
 		{
 			//getTimeString(time_str, TIME_STR_SIZE, '_');
@@ -149,24 +149,24 @@ int main()
 			(
 				time_str,"%lu.%06lu", curr_time_tv.tv_sec, curr_time_tv.tv_usec
 			);
-			printf("Got time string\n");
+			//printf("Got time string\n");
 
 			double x;
 			x = sin(i*PI/180.0);
-			printf("calculated sine\n");
+			//printf("calculated sine\n");
 
 			size_t msg_size = HEADERSIZE + 2 + TIME_STR_SIZE; 
 			char msg[msg_size];
 			sprintf(msg,"%0*g_%s",HEADERSIZE, x, time_str);
 			size_t true_msg_size = strlen(msg);
-			printf("built msg string\n");
+			//printf("built msg string\n");
 
 
 			//zmq socket send
 			if (zmq_send(publisher,msg, true_msg_size,ZMQ_DONTWAIT) < 0) {
 				perror("zmq_send() Error:");
 			}
-			printf("zmq sent\n");
+			//printf("zmq sent\n");
 
 			//standard socket send
 			ssize_t send_status = send(client_socket, msg, true_msg_size, MSG_NOSIGNAL);
@@ -178,7 +178,7 @@ int main()
 				}
 				else 
 				{
-					printf("Message sent: %s\n",msg);
+					//printf("Message sent: %s\n",msg);
 				}
 			}
 			else if (errno == EPIPE) 
@@ -192,20 +192,20 @@ int main()
 				perror("Error in send(): ");
 				break;
 			}
-			printf("sent\n");
+			//printf("sent\n");
 
-			size_t rec_size = 100;
+			/* size_t rec_size = 100;
 			char received[rec_size];
 			if (recv(client_socket,received, rec_size, MSG_DONTWAIT) > 0) {
 				printf("Message received: %s\n", received);
-				loggerSendLogMsg(logger,received,sizeof(received),"./test_log.txt",0,false);
+				loggerSendLogMsg(logger,received,sizeof(received),"./server_logs.txt",0,false);
 				printf("After log?\n");
 				if (strcmp(received, "CLOSE") == 0) {
 					printf("Stop Command Received\n");
 					loop_stop = true;
 				}
 			}
-			printf("rec\n");
+			printf("rec\n"); */
 			
 			zmq_msg_t rec_msg;
 			zmq_msg_init(&rec_msg); 
@@ -215,9 +215,14 @@ int main()
 			else {
 				char* zmq_received = zmq_msg_data(&rec_msg);
 				printf("zmq_received=%s\n",zmq_received);
+				loggerSendLogMsg(logger,zmq_received,zmq_msg_size(&rec_msg),"./server_logs.txt",0,false);
+				if (strcmp(zmq_received, "CLOSE") == 0) {
+					printf("Stop Command Received\n");
+					loop_stop = true;
+				}
 			}
 			zmq_msg_close(&rec_msg);
-			printf("zmq_req\n");
+			//printf("zmq_req\n");
 
 			i += 5;
 			i = i % 360;

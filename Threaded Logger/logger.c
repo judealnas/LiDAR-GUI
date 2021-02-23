@@ -8,12 +8,16 @@ void* loggerMain(void* arg_logger) {
     while (1) {
         logger_msg_t* rec_msg = (logger_msg_t*)fifoPull(logger->buffer,true);
         if (rec_msg == NULL) {
-            printf("NULL pointer received\n");
+            logStatus(logger,"loggerMain::NULL pointer received\n");
         }
-        printf("loggerMain:: CMD: %d\t PATH: %s\t MSG: %s\n", rec_msg->cmd, rec_msg->path, rec_msg->data);
+
+        char rec_msg_str[200];  //string to hold string representation of received message; may be source of future memory overflows
+        snprintf(rec_msg_str,200,"loggerMain:: CMD: %d\t PATH: %s\t MSG: %s\n", rec_msg->cmd, rec_msg->path, rec_msg->data);
+        logStatus(logger, rec_msg_str);
+        
         switch (rec_msg->cmd)
         {
-        case LOG:;
+        case LOG:;  //semicolon allows variable declaration following case label
             FILE* f = fopen(rec_msg->path, "a");
             if (f == NULL) {
                 char msg[] = "loggerMain: Error opening provided path"; 
@@ -49,7 +53,7 @@ logger_t* loggerCreate(uint16_t buffer_size) {
      * Use as parameter to pthreads_create for threaded logging **/
 
     //stat log initialization////////////////////////////
-    char *stat_log_stem = "/logger_logs.txt"; //WARNING: ASSUME UNIX PATH SEPARATOER
+    char *stat_log_stem = "/logger_stat_logs.txt"; //WARNING: ASSUME UNIX PATH SEPARATOER
     char *stat_log_root = "./logs";
     mkdir(stat_log_root, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); 
     char *stat_log_path = (char*) malloc(strlen(stat_log_root)+strlen(stat_log_stem)+2); //MEMCHECK 4
