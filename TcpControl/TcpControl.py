@@ -43,11 +43,12 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.zmq_monitor.sig_connected.connect(self.logZmqEvent)
         self.zmq_monitor.sig_disconnected.connect(self.logZmqEvent)
         self.zmq_monitor.sig_closed.connect(self.logZmqEvent)
+        self.zmq_monitor.sig_closed.connect(self.disconnectSocket)
 
         self.zmq_monitor_thread.finished.connect(self.zmq_monitor.deleteLater)
         self.zmq_monitor_thread.started.connect(self.zmq_monitor.monitorSocket)
 
-        self.zmq_monitor_thread.start()
+        self.zmq_monitor_thread.start() #this QThread is not closing on exit, causing core dump on GUI exit
 
     def zmqActivity(self):
         print("Notifer")
