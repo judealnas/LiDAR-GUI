@@ -54,7 +54,7 @@ class LidarPlot(qtw.QWidget):
 
         ## Instantiate logger object and threads
         self.data_logger = LidarLogger()
-        self.data_logger_thread = qtc.QThread(self)
+        #self.data_logger_thread = qtc.QThread(self)
         self.thread_pool = qtc.QThreadPool(self)
         #####################################
         
@@ -81,7 +81,6 @@ class LidarPlot(qtw.QWidget):
         worker.signals.sig_error.connect(lambda x: self.sig_log_event.emit("LidarLogger::" + x))  #connect error callback signals    
         self.thread_pool.globalInstance().start(worker) #start in any available thread
 
-    
         #add data to buffers
         self.buffer.append(y)   #most recent data is at end
         self.x.append(epoch)
@@ -162,10 +161,10 @@ class ThreadWorkerSignals(qtc.QObject):
     
 class LidarLogger(qtc.QObject):
     '''
-    Class that encapsulates all logging functinality
+    Class that encapsulates all logging functionality
     '''
 
-    default_file = 'data_file.csv'
+    default_file = 'lidarplot_datafile.csv'
     default_folder = os.path.dirname(__file__)
 
     def __init__(self,path=None,*args,**kwargs):
@@ -237,12 +236,18 @@ class TimestampAxisItem(pg.AxisItem):
         super().__init__(*args,**kwargs)
 
     def tickStrings(self, values, scale, spacing):
-        vs = [v*scale for v in values]
+        '''
+        This class defines for the pyqtgraph module a means of converting a UNIX timestamp
+        into axis tickmarks. This is done by converting the raw axis data (UNIX timestamp with fractional part)
+        into a timestamp string
+        '''
+        vs = [v*scale for v in values] #retrieve raw x-axis data (UNIX timestamp form [secs].[msecs] from Epoch)
         tick_str = []
         for v in vs:
-            l = str(v).split('.')
-            out = time.strftime("%Y %b %d\n%H:%M:%S", time.gmtime(int(l[0])))
-            out += "." + l[1]
+            l = str(v).split('.') #split number to get seconds and milliseconds part
+            out = time.strftime("%Y %b %d\n%H:%M:%S", time.gmtime(int(l[0]))) #use seconds to get timestamp string
+            out += "." + l[1] #append decimal point and milliseconds
+            out += " GMT" #append timezone
             tick_str.append(out)
         
         return tick_str
