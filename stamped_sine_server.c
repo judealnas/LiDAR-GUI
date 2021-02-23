@@ -136,7 +136,7 @@ int main()
 			
 		char time_str[TIME_STR_SIZE];
 		int i = 0;
-		useconds_t delay =1000000; //1000 ms
+		useconds_t delay =100000; //1000 ms
 		printf("Entering loop...\n");
 		while (!loop_stop)
 		{
@@ -163,7 +163,7 @@ int main()
 
 
 			//zmq socket send
-			if (zmq_send(publisher,msg, true_msg_size,0) < 0) {
+			if (zmq_send(publisher,msg, true_msg_size,ZMQ_DONTWAIT) < 0) {
 				perror("zmq_send() Error:");
 			}
 			printf("zmq sent\n");

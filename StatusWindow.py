@@ -5,13 +5,14 @@ import sys
 import os
 import time
 
+default_log_file = 'GUI_status_logs.txt'
 class StatusWindow(qtw.QPlainTextEdit):
 
     # class custom signal definitions
     sig_add_msg = qtc.pyqtSignal(str)
     sig_log_msg = qtc.pyqtSignal(str, str)
               
-    def __init__(self,path='status_logs.txt', *args, **kwargs):
+    def __init__(self,path=default_log_file, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.log_file = path
         if os.path.isabs(path):

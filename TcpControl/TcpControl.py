@@ -44,6 +44,11 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.zmq_monitor.sig_disconnected.connect(self.logZmqEvent)
         self.zmq_monitor.sig_closed.connect(self.logZmqEvent)
 
+        self.zmq_monitor_thread.finished.connect(self.zmq_monitor.deleteLater)
+        self.zmq_monitor_thread.started.connect(self.zmq_monitor.monitorSocket)
+
+        self.zmq_monitor_thread.start()
+
     def zmqActivity(self):
         print("Notifer")
         self.zmq_notifier.setEnabled(False)
@@ -148,7 +153,8 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.send_led.toggle()
         print("Sending {}".format(bytes(msg + '\0', 'utf-8')))
         #write_status = self.socket.write(bytes(msg + '\0', 'utf-8'))
-        print(self.zmq_socket.send(bytes(msg + '\0', 'utf-8')))
+        write_status = self.zmq_socket.send(bytes(msg + '\0', 'utf-8'), zmq.DONTWAIT)
+        print(write_status)
         print("zmq sent")
         self.sig_log_event.emit(log_event_string+"writeSocket:: wrote {} with status {}".format(msg,write_status))
 
