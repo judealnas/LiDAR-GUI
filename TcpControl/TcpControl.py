@@ -37,8 +37,8 @@ class TcpControl(baseClass, Ui_TcpControl):
         ## signals
         self.dis_conn_button.released.connect(self.connectSocket)  
         self.socket.readyRead.connect(self.readSocket) #automatically read data from socket whenever availables
-        self.socket.stateChanged.connect(self.logSocketStateChage)  #for debugging, track state of socket
-        self.socket.errorOccurred.connect(self.logSocketError)  #log any socket errors as they occur
+        self.socket.stateChanged.connect(self.handleSocketStateChage)  #for debugging, track state of socket
+        self.socket.errorOccurred.connect(self.handleSocketError)  #log any socket errors as they occur
         
         '''
         #ZMQ Socket Event signals
@@ -74,21 +74,43 @@ class TcpControl(baseClass, Ui_TcpControl):
             
         self.zmq_notifier.setEnabled(True)
         print("Notifer Enabled")
+    """
     
-
+    """
     def logZmqEvent(self, evt):
         self.sig_log_event.emit(log_event_string + f"{evt}")
     """
 
-    def logSocketError(self, value:int):
-        error_str = self.socket.errorString()
-        self.sig_log_event.emit(log_event_string+error_str)
+    def handleSocketError(self, value:int):
+        '''
+        Method executes whenever socket error occurs. 
+        First log the event then handle
+        '''
+        socket_error = self.socket.error()
+        socket_error_str = self.socket.errorString()
+        self.sig_log_event.emit(log_event_string+socket_error_str)
+
+        #If server terminates connection, disconnect socket
+        if socket_error == qtn.QAbstractSocket.RemoteHostClosedError:
+            self.disconnectSocket()
 
 
-    def logSocketStateChage(self, value: int): 
+    def handleSocketStateChage(self, socket_state: int):
+        '''
+        Executes on socke state change
+        '''
+        #Log socket state change event 
         meta = self.socket.staticMetaObject
-        state_str = meta.enumerator(meta.indexOfEnumerator('SocketState')).valueToKey(value)
+        state_str = meta.enumerator(meta.indexOfEnumerator('SocketState')).valueToKey(socket_state)
         self.sig_log_event.emit(log_event_string+"Socket State = {}".format(state_str))
+
+        if socket_state == qtn.QAbstractSocket.ConnectedState:
+            print("Connected")
+            self.sig_log_event.emit(log_event_string+f"connectSocket::connected to {self.address.toIPv4Address}:{self.port}")
+            self.panelConnected(True)
+            self.socket.setSocketOption(qtn.QAbstractSocket.KeepAliveOption,1)
+        if socket_state == qtn.QAbstractSocket.UnconnectedState:
+            self.panelConnected(False)   
 
     def connectSocket(self):
         timeout_ms = 30*1000
@@ -107,12 +129,7 @@ class TcpControl(baseClass, Ui_TcpControl):
         # connect socket
         self.socket.connectToHost(self.address, self.port)
         self.dis_conn_button.setEnabled(False)
-        if (self.socket.waitForConnected(timeout_ms)): #BLOCKING
-            print("Connected")
-            self.sig_log_event.emit(log_event_string+f"connectSocket::connected to {self.address.toIPv4Address}:{self.port}")
-            self.panelConnected(True)
-            self.socket.setSocketOption(qtn.QAbstractSocket.KeepAliveOption,1)
-        else:
+        if not self.socket.waitForConnected(timeout_ms): #BLOCKING
             print("Failed to Connect!", self.socket.error())
             self.sig_log_event.emit(log_event_string+f"connectSocket::failed to connect with {self.socket.error()}")
 
