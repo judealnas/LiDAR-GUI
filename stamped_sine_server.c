@@ -69,15 +69,17 @@ int main()
 	int major;
 	int minor;
 	int patch;
-	zmq_version(&major, &minor, &patch);
-	printf("ZMQ Version: %d.%d.%d\n", major, minor, patch);
+	
+	//Print ZMQ Version
+	/* zmq_version(&major, &minor, &patch);
+	printf("ZMQ Version: %d.%d.%d\n", major, minor, patch); */
 
 	//Initializing ZMQ sockets
-	void *context = zmq_ctx_new();
+	/* void *context = zmq_ctx_new();
 	void *publisher = zmq_socket(context, ZMQ_PAIR); //Create PAIR socket for bi-directional, 1-to-1 communication
 	if(zmq_bind(publisher,"tcp://*:49217") != 0) {
 		perror("zmq_bind() error:");
-	}
+	} */
 
 	//Initializing logging thread
 	logger_t* logger = loggerCreate(30);
@@ -163,10 +165,12 @@ int main()
 
 
 			//zmq socket send
+			/* 
 			if (zmq_send(publisher,msg, true_msg_size,ZMQ_DONTWAIT) < 0) {
 				perror("zmq_send() Error:");
 			}
-			//printf("zmq sent\n");
+			printf("zmq sent\n"); 
+			*/
 
 			//standard socket send
 			ssize_t send_status = send(client_socket, msg, true_msg_size, MSG_NOSIGNAL);
@@ -184,7 +188,6 @@ int main()
 			else if (errno == EPIPE) 
 			{
 				printf("sending on dead socket. Breaking from loop.\n");
-				close(client_socket);
 				break;
 			}
 			else 
@@ -194,7 +197,7 @@ int main()
 			}
 			//printf("sent\n");
 
-			/* size_t rec_size = 100;
+			size_t rec_size = 100;
 			char received[rec_size];
 			if (recv(client_socket,received, rec_size, MSG_DONTWAIT) > 0) {
 				printf("Message received: %s\n", received);
@@ -203,10 +206,12 @@ int main()
 				if (strcmp(received, "CLOSE") == 0) {
 					printf("Stop Command Received\n");
 					loop_stop = true;
+					break;
 				}
 			}
-			printf("rec\n"); */
+			//printf("rec\n"); 
 			
+			/* 
 			zmq_msg_t rec_msg;
 			zmq_msg_init(&rec_msg); 
 			if (zmq_msg_recv(&rec_msg, publisher, ZMQ_DONTWAIT) < 0) {
@@ -222,18 +227,20 @@ int main()
 				}
 			}
 			zmq_msg_close(&rec_msg);
-			//printf("zmq_req\n");
+			printf("zmq_req\n"); 
+			*/
 
 			i += 5;
 			i = i % 360;
 
 			usleep(delay);
-		} // end while (!loop_stop)	
+		} // end while (!loop_stop)
+		close(client_socket);	
 	} // end while (1)
 	loggerSendCloseMsg(logger,0,true);
 	pthread_join(logger_tid,NULL);
-	zmq_close(publisher);
-	zmq_ctx_destroy(context);
+	// zmq_close(publisher);
+	// zmq_ctx_destroy(context);
 	close(server_socket);
 	printf("Exitted\n");
 	return 0;

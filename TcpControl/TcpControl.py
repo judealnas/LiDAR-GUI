@@ -4,9 +4,9 @@ sys.path.insert(0,dirname(dirname(__file__)))
 from PyQt5.QtNetwork import QTcpSocket, QHostAddress 
 from PyQt5 import QtCore as qtc, QtWidgets as qtw, uic, QtNetwork as qtn
 import random
-import zmq
-import zmq.utils
-from ZmqMonitor import ZmqMonitor
+#import zmq
+#import zmq.utils
+#from ZmqMonitor import ZmqMonitor
 
 Ui_TcpControl, baseClass = uic.loadUiType(join(dirname(__file__),'Ui_TcpControl.ui'))
 log_event_string = "{}::".format(__name__)
@@ -18,26 +18,30 @@ class TcpControl(baseClass, Ui_TcpControl):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args,**kwargs)
-        self.setupUi(self)
-        self.receive_led.setMinimumSize(35,35)
+        self.setupUi(self)  #Build front panel
+        self.receive_led.setMinimumSize(35,35) 
         self.send_led.setMinimumSize(35,35)
         
         self.socket = QTcpSocket(self)
 
+        '''
+        ######################ZMQ Code###########
         self.zmq_context = zmq.Context()
-        self.zmq_socket = self.zmq_context.socket(zmq.PAIR)
-        #self.zmq_socket.setsockopt_string(zmq.SUBSCRIBE,'')
-        self.zmq_notifier = qtc.QSocketNotifier(self.zmq_socket.getsockopt(zmq.FD), qtc.QSocketNotifier.Read, self)
-        self.zmq_monitor_thread = qtc.QThread(self)
-        self.zmq_monitor = ZmqMonitor(self.zmq_socket)
+        self.zmq_socket = self.zmq_context.socket(zmq.PAIR) #P2P, bidiorectional
+        self.zmq_socket.setsockopt_string(zmq.SUBSCRIBE,'') #receive all published data
+        self.zmq_notifier = qtc.QSocketNotifier(self.zmq_socket.getsockopt(zmq.FD), qtc.QSocketNotifier.Read, self) #notifier for data ready event
+        self.zmq_monitor_thread = qtc.QThread(self) #thread to host ZMQ socket monitor
+        self.zmq_monitor = ZmqMonitor(self.zmq_socket) #zmq socket monitor instantiation
         self.zmq_monitor.moveToThread(self.zmq_monitor_thread)
-
+        '''
         ## signals
-        self.dis_conn_button.released.connect(self.connectSocket)
+        self.dis_conn_button.released.connect(self.connectSocket)  
         self.socket.readyRead.connect(self.readSocket) #automatically read data from socket whenever availables
         self.socket.stateChanged.connect(self.logSocketStateChage)  #for debugging, track state of socket
         self.socket.errorOccurred.connect(self.logSocketError)  #log any socket errors as they occur
         
+        '''
+        #ZMQ Socket Event signals
         self.zmq_notifier.activated.connect(self.zmqActivity)
         self.zmq_monitor.sig_error_occurred.connect(self.logZmqEvent)
         self.zmq_monitor.sig_connected.connect(self.logZmqEvent)
@@ -49,8 +53,15 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.zmq_monitor_thread.started.connect(self.zmq_monitor.monitorSocket)
 
         self.zmq_monitor_thread.start() #this QThread is not closing on exit, causing core dump on GUI exit
-
+        '''
+    
+    """
     def zmqActivity(self):
+        '''
+        Reads all data available on zmq_socket. Used as the slot of the QSocketNotifier (QSN) event.
+        When the QSN is called, the notifer is disabled. Then, ALL data must be read from the socket
+        in order to work. 
+        ''' 
         print("Notifer")
         self.zmq_notifier.setEnabled(False)
         print(self.zmq_socket.getsockopt(zmq.EVENTS))
@@ -63,10 +74,12 @@ class TcpControl(baseClass, Ui_TcpControl):
             
         self.zmq_notifier.setEnabled(True)
         print("Notifer Enabled")
+    
 
     def logZmqEvent(self, evt):
         self.sig_log_event.emit(log_event_string + f"{evt}")
-        
+    """
+
     def logSocketError(self, value:int):
         error_str = self.socket.errorString()
         self.sig_log_event.emit(log_event_string+error_str)
@@ -90,9 +103,7 @@ class TcpControl(baseClass, Ui_TcpControl):
         #save port
         self.port = int(self.port_lineedit.text())
         
-        #zmq socket
-        zmq_connect_status = self.zmq_socket.connect("tcp://localhost:49217")
-        
+
         # connect socket
         self.socket.connectToHost(self.address, self.port)
         self.dis_conn_button.setEnabled(False)
@@ -100,6 +111,7 @@ class TcpControl(baseClass, Ui_TcpControl):
             print("Connected")
             self.sig_log_event.emit(log_event_string+f"connectSocket::connected to {self.address.toIPv4Address}:{self.port}")
             self.panelConnected(True)
+            self.socket.setSocketOption(qtn.QAbstractSocket.KeepAliveOption,1)
         else:
             print("Failed to Connect!", self.socket.error())
             self.sig_log_event.emit(log_event_string+f"connectSocket::failed to connect with {self.socket.error()}")
@@ -111,7 +123,7 @@ class TcpControl(baseClass, Ui_TcpControl):
         TO-DO: Depending on conditions, emit signals to exit the socket read/write threads
         '''
         self.socket.disconnectFromHost()
-        self.zmq_socket.disconnect("tcp://localhost:49217")
+        #self.zmq_socket.disconnect("tcp://localhost:49217")
         self.sig_log_event.emit(log_event_string+"disconnectSocket::disconnected socket")
         self.panelConnected(False)
         
@@ -147,16 +159,16 @@ class TcpControl(baseClass, Ui_TcpControl):
     def readSocket(self):
         self.receive_led.toggle()
         data_in = self.socket.readAll()
-        #self.sig_log_event.emit(log_event_string+"readSocket::received {}".format(str(data_in)))
-        #self.sig_broadcast_data.emit(data_in)
+        self.sig_log_event.emit(log_event_string+"readSocket::received {}".format(str(data_in)))
+        self.sig_broadcast_data.emit(data_in)
     
     def writeSocket(self, msg: str):
         self.send_led.toggle()
         print("Sending {}".format(bytes(msg + '\0', 'utf-8')))
-        #write_status = self.socket.write(bytes(msg + '\0', 'utf-8'))
-        write_status = self.zmq_socket.send(bytes(msg + '\0', 'utf-8'), zmq.DONTWAIT)
+        write_status = self.socket.write(bytes(msg + '\0', 'utf-8'))
+        #write_status = self.zmq_socket.send(bytes(msg + '\0', 'utf-8'), zmq.DONTWAIT)
         print(write_status)
-        print("zmq sent")
+        #print("zmq sent")
         self.sig_log_event.emit(log_event_string+"writeSocket:: wrote {} with status {}".format(msg,write_status))
 
     def receiveLedState(self, state):

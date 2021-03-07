@@ -1,6 +1,14 @@
 from PyQt5 import QtCore as qtc, QtWidgets as qtw, QtGui as qtg 
 
 class MsgControl(qtw.QWidget):
+    '''
+    Widget containing two line edits.
+    One is enabled and allows the user to enter a string.
+    When the SEND button or enter is pushed, the provided string is emitted over a signal.
+    TcpControl receives this string to transmit over TCP socket
+    
+    The second line edit is meant to display a return message but currently echoes the input
+    '''
 
     sig_send_msg = qtc.pyqtSignal(str)
 
@@ -25,7 +33,7 @@ class MsgControl(qtw.QWidget):
 
         #connect signals
         self.send_button.released.connect(self.sendMsg)
-        self.send_lineedit.returnPressed.connect(self.sendMsg)
+        self.send_lineedit.returnPressed.connect(self.sendMsg) #execute sendMsg when return key is pressed
         self.sig_send_msg.connect(self.setReceiveText) #DEBUG
 
         #self.show()
