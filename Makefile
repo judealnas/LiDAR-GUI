@@ -8,5 +8,7 @@ stamped_sine_server: stamped_sine_server.c
 
 stamped_sine_server.c:
 
+tcp_handler.c:
+	gcc tcp_handler.c -c tcp_handler.o
 clean_stamp:
 	rm stamped_sine_server 
