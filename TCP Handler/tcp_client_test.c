@@ -37,14 +37,24 @@ int main()
         scanf("%c", &c);
         switch(c)
         {
+            case 'r':;
+                char recv_buff[20];
+                int recv_return = recv(server_socket, recv_buff, sizeof(recv_buff), 0);
+                printf("recv_return= %d\n",recv_return);
+                if (recv_return) //if non-zero bytes were read
+                {
+                    printf("Received: \"%s\"\n", recv_buff);
+                    break;
+                } 
+                else //else no bytes read; server disconnected
+                {
+                    printf("Server Disconnect detected\n");
+                    //cascade into case 'c'
+                }
             case 'c':
                 printf("Closing socket and exiting\n");
                 close(server_socket);
-                break;
-            case 'r':;
-                char recv_buff[20];
-                printf("recv return= %ld\n",recv(server_socket, recv_buff, sizeof(recv_buff), 0));
-                printf("Received: \"%s\"\n", recv_buff);
+                c == 'c'; //Terminates if case 'c' reached via cascade from case 'r'
                 break;
             default:
                 break;

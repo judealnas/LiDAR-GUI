@@ -51,4 +51,5 @@ int main()
     } while (c != 'c');
 
     pthread_join(tcp_handler_tid, NULL);
+    tcpHandlerDestroy(tcp_handler);
 } //end main()
