@@ -10,7 +10,7 @@ void* loggerMain(void* arg_logger) {
         if (rec_msg == NULL) {
             logStatus(logger,"loggerMain::NULL pointer received\n");
         }
-
+        //sleep(1);
         char rec_msg_str[200];  //string to hold string representation of received message; may be source of future memory overflows
         snprintf(rec_msg_str,200,"loggerMain:: CMD: %d\t PATH: %s\t MSG: %s\n", rec_msg->cmd, rec_msg->path, rec_msg->data);
         logStatus(logger, rec_msg_str);
@@ -58,14 +58,14 @@ logger_t* loggerCreate(uint16_t buffer_size) {
     mkdir(stat_log_root, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); 
     char *stat_log_path = (char*) malloc(strlen(stat_log_root)+strlen(stat_log_stem)+2); //MEMCHECK 4
     if (stat_log_path == NULL) {
-        printf("ERROR ALLOCATING MEMORY FOR STAT LOG PATH IN LOGGER INITIALIZATION");
+        printf("ERROR ALLOCATING MEMORY FOR STAT LOG PATH IN LOGGER INITIALIZATION\n");
     }
 
     strcpy(stat_log_path,stat_log_root);
     strcat(stat_log_path,stat_log_stem);
     FILE* stat_log_file = fopen(stat_log_path, "a");
     if (stat_log_file == NULL) {
-        printf("ERROR OPENING STAT LOG FILE REFERENCE");
+        printf("ERROR OPENING STAT LOG FILE REFERENCE\n");
     }
     
     //write current time and separator to file
@@ -132,6 +132,6 @@ int loggerSendLogMsg(logger_t* logger, char* data_str, size_t data_str_size, cha
 }
 
 int loggerSendCloseMsg(logger_t* logger, int priority, bool blocking) {
-    void* data = (void*) loggerMsgCreate(CLOSE, "", sizeof(""), "");
+    void* data = (void*) loggerMsgCreate(CLOSE, " ", sizeof(" "), " ");
     return fifoPush(logger->buffer,data, priority, blocking);
 }

@@ -2,8 +2,8 @@
 #include <stdlib.h>
 
 int main() {
-    logger_t* logger = loggerCreate(10);
-    for (int i = 0; i < 15; i++) {
+    logger_t* logger = loggerCreate(5);
+    for (int i = 0; i < 50; i++) {
         char data[5];
         sprintf(data, "%d", i);
         if(loggerSendLogMsg(logger, data,sizeof(data), "./test.txt",0,false) >= 0) {
