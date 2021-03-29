@@ -1,12 +1,10 @@
 CC=gcc
-CFLAGS= -O
+CFLAGS= -O -g
 OBJ= logger.o
 LIBS = -lfifo -lpthread
 INCLUDE = -I . 
 FIFOATH = /home/jude/Projects/General-FIFO #point to directory containing libfifo.a
 ARFLAGS= -rc
-
-all: liblogger.a
 
 liblogger.a: logger.o 
 	ar $(ARFLAGS) $@ $<

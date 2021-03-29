@@ -1,11 +1,4 @@
-#include "tcp_handler.c"
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <string.h>
-
-#include <netinet/in.h>
-#include <netinet/tcp.h>
+#include "tcp_handler.h"
 #include <arpa/inet.h>
 
 #define PORT 49217

@@ -1,36 +1,4 @@
-#include "fifo.h"
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <string.h>
-
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-
-
-typedef enum TcpHandlerCMD {
-    WRITE,
-    DISCONNECT,
-    CLOSE
-} tcp_cmd_t;
-
-typedef enum TcpHandlerState {
-    UNCONNECTED,
-    CONNECTED,
-    ERROR
-} tcp_state_t;
-
-typedef struct TcpHandlerMsg {
-    tcp_cmd_t CMD;
-    char* data;
-    size_t data_len;
-} tcp_msg_t;
-
-typedef struct TcpHandler {
-    struct sockaddr_in server_address;  //address to place socket that listens for client connections
-    tcp_state_t tcp_state;              //current state of the tcp_handler; check from producer to see if ready for writes
-    fifo_buffer_t* write_buffer;        //fifo buffer holding data to write
-} tcp_handler_t;
+#include "tcp_handler.h"
 
 tcp_msg_t* tcpMsgCreate(tcp_cmd_t CMD, char* data, size_t data_len)
 {
@@ -83,6 +51,7 @@ tcp_handler_t* tcpHandlerInit(struct sockaddr_in server_address, int max_buffer_
     tcp_handler->server_address = server_address;
     tcp_handler->tcp_state = UNCONNECTED;
     tcp_handler->write_buffer = fifoBufferInit(max_buffer_size);
+    tcp_handler->client_socket = -1;
     
     return tcp_handler;
 } //end tcpHandlerInit()
@@ -96,22 +65,21 @@ tcp_msg_t** tcpHandlerDestroy(tcp_handler_t* tcp_handler)
 
 int tcpHandlerWrite(tcp_handler_t* tcp_handler, char* data, size_t data_len, int priority, bool blocking)
 {
-    void* msg = (void*)tcpMsgCreate(WRITE, data, data_len);
+    void* msg = (void*)tcpMsgCreate(TCPH_WRITE, data, data_len);
     return fifoPush(tcp_handler->write_buffer, msg, priority, blocking);
 } //end tcpHandlerWrite()
 
 int tcpHandlerClose(tcp_handler_t* tcp_handler, int priority, bool blocking)
 {
-    void* msg = (void*)tcpMsgCreate(CLOSE, NULL, 0);
+    void* msg = (void*)tcpMsgCreate(TCPH_CLOSE, NULL, 0);
     return fifoPush(tcp_handler->write_buffer, msg, priority, blocking);
 } //end tcpHandlerWrite()
 
 int tcpHandlerDisconnect(tcp_handler_t* tcp_handler, int priority, bool blocking)
 {
-    void* msg = (void*)tcpMsgCreate(DISCONNECT, NULL, 0);
+    void* msg = (void*)tcpMsgCreate(TCPH_DISCONNECT, NULL, 0);
     return fifoPush(tcp_handler->write_buffer, msg, priority, blocking);
 } //end tcpHandlerDisconnect()
-
 
 void* tcpHandlerMain(void* tcpHandler_void)
 {
@@ -170,6 +138,9 @@ void* tcpHandlerMain(void* tcpHandler_void)
                 {
                     /* A connection was made; configure socket and transition to CONNECTED state */
                     
+                    //share client_socket with producer threads
+                    tcp_handler->client_socket = client_socket;
+
                     //config TCP Keepalive
                     tcpConfigKeepalive(client_socket, 15, 5, 3);
 
@@ -186,8 +157,8 @@ void* tcpHandlerMain(void* tcpHandler_void)
 
                     if (recv_msg != NULL)
                     {
-                        printf("accept: recv_msg = %d\n",recv_msg->CMD);
-                        if(recv_msg->CMD == CLOSE)
+                        // printf("tcp_handler.c::accept:: recv_msg = %d\n",recv_msg->CMD);
+                        if(recv_msg->CMD == TCPH_CLOSE)
                         {
                             close(server_socket);
                             return NULL;
@@ -199,7 +170,7 @@ void* tcpHandlerMain(void* tcpHandler_void)
 
             case CONNECTED:
             /**In the connected state, receive and execute commands from the buffer
-             * until the CLOSE command is received or an error occurs
+             * until the TCPH_CLOSE command is received or an error occurs
              * 
              */ 
                 while (tcp_handler->tcp_state == CONNECTED)
@@ -209,17 +180,27 @@ void* tcpHandlerMain(void* tcpHandler_void)
 
                     //if NULL received from buffer, skip to beginning of next iteration
                     if (recv_msg == NULL) continue;
-
+                    
                     printf("tcp_handler: received %d\n", recv_msg->CMD);
                     switch(recv_msg->CMD)
                     {
-                        case WRITE:;
+                        case TCPH_WRITE:;
                             printf("tcpHandlerMain: about to send\n");
-                            ssize_t send_status = send(client_socket,recv_msg->data, recv_msg->data_len, MSG_NOSIGNAL);
+                            
+                            /******** Length Prefixing ********/
+                            static int const HEADER_LEN = 10;
+                            int msg_size = HEADER_LEN + recv_msg->data_len+2;
+                            char* msg = (char*)calloc(msg_size,sizeof(char));
+                            int true_msg_size = snprintf(msg, msg_size,"|%-*ld%s",HEADER_LEN, recv_msg->data_len, recv_msg->data); 
+                            /**********************************/
+
+                            printf("tcp_handler::sending %s\n", msg);
+                            ssize_t send_status = send(client_socket,msg, strlen(msg), MSG_NOSIGNAL);
+                            free(msg);
                             printf("tcpHandlerMain: send_status=%ld\n", send_status);
                             if (send_status >= 0) //data successfully transmitted
                             {
-                                if(send_status < recv_msg->data_len) 
+                                if(send_status < msg_size) 
                                 {
                                     printf("Not all data sent\n");
                                 }
@@ -228,8 +209,10 @@ void* tcpHandlerMain(void* tcpHandler_void)
                             {
                                 switch(errno)
                                 {
+                                    case ECONNRESET: //ECONNRESET returned if client disconnected(?)
                                     case EPIPE: //EPIPE returned if client disconnected
                                         printf("sending on dead socket. Breaking from loop.\n");
+                                        tcpHandlerDisconnect(tcp_handler,-1,true);
                                         tcp_handler->tcp_state = UNCONNECTED;
                                         break;
                                     default: //exit for all unhandled errors
@@ -239,14 +222,16 @@ void* tcpHandlerMain(void* tcpHandler_void)
                                 }
                             }
                             break;
-                        case DISCONNECT:
+                        case TCPH_DISCONNECT:
                             close(client_socket);
-                            printf("tcp_handler: DISCONNECT executed\n");
+                            tcp_handler->client_socket = -1;
+                            printf("tcp_handler: TCPH_DISCONNECT executed\n");
                             tcp_handler->tcp_state = UNCONNECTED;
                             break;
-                        case CLOSE:
-                            printf("tcp_handler: CLOSE executing\n");
+                        case TCPH_CLOSE:
+                            printf("tcp_handler: TCPH_CLOSE executing\n");
                             close(client_socket);
+                            tcp_handler->client_socket = -1;
                             printf("tcp_handler: closed client\n");
                             close(server_socket);
                             printf("tcp_handler: closed server\n");

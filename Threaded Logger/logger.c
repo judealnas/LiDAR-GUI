@@ -17,7 +17,7 @@ void* loggerMain(void* arg_logger) {
         
         switch (rec_msg->cmd)
         {
-        case LOG:;  //semicolon allows variable declaration following case label
+        case LOGGER_LOG:;  //semicolon allows variable declaration following case label
             FILE* f = fopen(rec_msg->path, "a");
             if (f == NULL) {
                 char msg[] = "loggerMain: Error opening provided path"; 
@@ -34,7 +34,7 @@ void* loggerMain(void* arg_logger) {
             }
             fclose(f);
             break;
-        case CLOSE:;
+        case LOGGER_CLOSE:;
             /** FREE MEMORY HERE **/
             return loggerDestroy(logger);
             break;
@@ -127,11 +127,11 @@ int logStatus(logger_t* buffer, char* msg) {
 }
 
 int loggerSendLogMsg(logger_t* logger, char* data_str, size_t data_str_size, char* path, int priority, bool blocking) {
-    void* data = (void*) loggerMsgCreate(LOG, data_str, data_str_size, path);
+    void* data = (void*) loggerMsgCreate(LOGGER_LOG, data_str, data_str_size, path);
     return fifoPush(logger->buffer,data, priority, blocking);
 }
 
 int loggerSendCloseMsg(logger_t* logger, int priority, bool blocking) {
-    void* data = (void*) loggerMsgCreate(CLOSE, "", sizeof(""), "");
+    void* data = (void*) loggerMsgCreate(LOGGER_CLOSE, "", sizeof(""), "");
     return fifoPush(logger->buffer,data, priority, blocking);
 }
