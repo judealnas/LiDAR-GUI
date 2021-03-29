@@ -21,7 +21,7 @@ typedef enum TcpHandlerState {
 
 typedef struct TcpHandlerMsg {
     tcp_cmd_t CMD;
-    char* data;
+    void* data;
     size_t data_len;
 } tcp_msg_t;
 
@@ -32,8 +32,9 @@ typedef struct TcpHandler {
     fifo_buffer_t* write_buffer;        //fifo buffer holding data to write
 } tcp_handler_t;
 
-//Returns pointer to allocated memory space holding a TCP Handler message struct
-tcp_msg_t* tcpMsgCreate(tcp_cmd_t CMD, char* data, size_t data_len);
+//Returns pointer to allocated memory space holding a TCP Handler message struct.
+//A pointer to a copy of the contents of data is used in the message struct
+tcp_msg_t* tcpMsgCreate(tcp_cmd_t CMD, void* data, size_t data_len);
 
 //De allocates memory allocated for the 'data' member of the msg struct as well as the
 //memory for the msg struct itself
@@ -49,7 +50,7 @@ tcp_handler_t* tcpHandlerInit(struct sockaddr_in server_address, int max_buffer_
 tcp_msg_t** tcpHandlerDestroy(tcp_handler_t* tcp_handler) ;
 
 //Sends data to the client socket currently connected to the handler
-int tcpHandlerWrite(tcp_handler_t* tcp_handler, char* data, size_t data_len, int priority, bool blocking);
+int tcpHandlerWrite(tcp_handler_t* tcp_handler, void* data, size_t data_len, int priority, bool blocking);
 
 //Sends close message to the tcp_handler; Current connections are closed and its executing thread stops.
 int tcpHandlerClose(tcp_handler_t* tcp_handler, int priority, bool blocking);

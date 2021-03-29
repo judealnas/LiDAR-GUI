@@ -1,20 +1,17 @@
 #include "tcp_handler.h"
 
-tcp_msg_t* tcpMsgCreate(tcp_cmd_t CMD, char* data, size_t data_len)
+tcp_msg_t* tcpMsgCreate(tcp_cmd_t CMD, void* data, size_t data_len)
 {
     tcp_msg_t* tcp_msg = (tcp_msg_t*) malloc(sizeof(tcp_msg_t));
     tcp_msg->CMD = CMD;
     tcp_msg->data_len = data_len;
-    
+    tcp_msg->data = NULL;
+
     if (data != NULL)
     {
         //if valid data provided, duplicate into message struct (tcp_msg->data MUST BE FREED USING DESTRUCTOR)
-        tcp_msg->data = strndup(data, data_len);
-    }
-    else
-    {
-        //OTW assign NULL pointer
-        tcp_msg->data = NULL;
+        tcp_msg->data = malloc(data_len);
+        tcp_msg->data = memcpy(tcp_msg->data, data,data_len);
     }
     return tcp_msg;
 } //end tcpMsgCreate()
@@ -63,7 +60,7 @@ tcp_msg_t** tcpHandlerDestroy(tcp_handler_t* tcp_handler)
     return leftover; 
 } //end tcpHandlerDestroy()
 
-int tcpHandlerWrite(tcp_handler_t* tcp_handler, char* data, size_t data_len, int priority, bool blocking)
+int tcpHandlerWrite(tcp_handler_t* tcp_handler, void* data, size_t data_len, int priority, bool blocking)
 {
     void* msg = (void*)tcpMsgCreate(TCPH_WRITE, data, data_len);
     return fifoPush(tcp_handler->write_buffer, msg, priority, blocking);
