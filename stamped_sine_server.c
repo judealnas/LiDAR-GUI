@@ -118,7 +118,7 @@ int main()
 	{			
 		char time_str[TIME_STR_SIZE];
 		int i = 0;
-		useconds_t delay =100000; //1000 ms
+		useconds_t delay =10000; //1000 ms
 		//printf("Entering loop...\n");
 		while (!loop_stop)
 		{

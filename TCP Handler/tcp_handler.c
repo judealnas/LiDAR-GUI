@@ -185,19 +185,28 @@ void* tcpHandlerMain(void* tcpHandler_void)
                             printf("tcpHandlerMain: about to send\n");
                             
                             /******** Length Prefixing ********/
-                            static int const HEADER_LEN = 10;
-                            int msg_size = HEADER_LEN + recv_msg->data_len+2;
-                            char* msg = (char*)calloc(msg_size,sizeof(char));
-                            int true_msg_size = snprintf(msg, msg_size,"|%-*ld%s",HEADER_LEN, recv_msg->data_len, recv_msg->data); 
+                            size_t out_msgsize = START_BYTES + HEADER_BYTES + recv_msg->data_len;
+                            void* out_msg = malloc(out_msgsize);
+                            *(START_TYPE*)out_msg = START_DATA;  // insert start data
+                            *(HEADER_TYPE*)(out_msg+START_BYTES) = recv_msg->data_len; // insert data size in header bytes
+                            memcpy(out_msg+START_BYTES+ HEADER_BYTES, recv_msg->data, recv_msg->data_len); //data bytes
                             /**********************************/
 
-                            printf("tcp_handler::sending %s\n", msg);
-                            ssize_t send_status = send(client_socket,msg, strlen(msg), MSG_NOSIGNAL);
-                            free(msg);
+                            /******* printing output ********/
+                            printf("tcp_handler::sending ");
+                            for (int i = 0; i < out_msgsize; i++)
+                            {
+                                printf("%02X", *((uint8_t*)out_msg+i));
+                            }
+                            printf("\n");
+                            /********************************/
+
+                            ssize_t send_status = send(client_socket,out_msg, out_msgsize, MSG_NOSIGNAL);
+                            free(out_msg);
                             printf("tcpHandlerMain: send_status=%ld\n", send_status);
                             if (send_status >= 0) //data successfully transmitted
                             {
-                                if(send_status < msg_size) 
+                                if(send_status < out_msgsize) 
                                 {
                                     printf("Not all data sent\n");
                                 }

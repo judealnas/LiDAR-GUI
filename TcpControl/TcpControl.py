@@ -185,12 +185,12 @@ class TcpControl(baseClass, Ui_TcpControl):
                 break
             i = i+1
         
-        data_count_b = self.socket.read(10)
-        data_count_str = str(data_count_b, 'utf-8')
-        data_in = self.socket.read(int(data_count_str))
+        data_count_b = self.socket.read(4)
+        data_count = int.from_bytes(data_count_b,byteorder='little',signed=False)
+        data_in = self.socket.read(data_count)
                 
         # data_in = self.socket.readAll()
-        print("first read:", str(data_count_b,'utf-8'), i)
+        print("data_count:", data_count, i)
         print("second read:", str(data_in,'utf-8'))
         self.sig_log_event.emit(log_event_string+"readSocket::received {}".format(str(data_in)))
         self.sig_broadcast_data.emit(data_in)
