@@ -7,6 +7,7 @@
 #include <string.h>
 #include <czmq.h>
 #include "Threaded Logger/logger.h"
+#include "TCP Handler/tcp_handler.h"
 
 #define PI 3.14159265
 
@@ -19,6 +20,21 @@
 #define HEADERSIZE 10
 #define PORT 49417
 #define TIME_STR_SIZE 27 //YYYY-mm-DD-HH-MM-SS-uuuuuu\0
+
+uint8_t loop_stop = false; //quick and dirty global stop flag for input monitoring thread
+
+void* userInputThread()
+{
+	char c;
+	do
+	{
+		printf("Enter \'q\' or \'Q\' to quit\n");
+		scanf(" %c ", &c);
+	} while (c != 'q' && c != 'Q');
+
+	loop_stop = true;
+	return NULL;
+}
 
 size_t getTimeString(char* str_result, size_t str_size, char delim) 
 {	/**
@@ -69,76 +85,40 @@ int main()
 	int major;
 	int minor;
 	int patch;
-	
-	//Print ZMQ Version
-	/* zmq_version(&major, &minor, &patch);
-	printf("ZMQ Version: %d.%d.%d\n", major, minor, patch); */
 
-	//Initializing ZMQ sockets
-	/* void *context = zmq_ctx_new();
-	void *publisher = zmq_socket(context, ZMQ_PAIR); //Create PAIR socket for bi-directional, 1-to-1 communication
-	if(zmq_bind(publisher,"tcp://*:49217") != 0) {
-		perror("zmq_bind() error:");
-	} */
 
-	//Initializing logging thread
+	/******** logging thread ********/
 	logger_t* logger = loggerCreate(30);
 	pthread_t logger_tid;
 	pthread_create(&logger_tid, NULL, &loggerMain, logger);
-	////////////////////////////////////////
+	/*********************************/
 
 	char server_message[50] = "You have reached the server!";
 
-	// create the listening server socket
-	int server_socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (server_socket  < 0) 
-	{
-		perror("socket() call failed!");
-		exit(1);
-	}
-
+	/******* Creating TCP Handler Thread *******/
 	// define the server address
 	struct sockaddr_in server_address;
 	server_address.sin_family = AF_INET; //TCP
 	server_address.sin_port = htons(PORT); //define port
 	server_address.sin_addr.s_addr = INADDR_ANY; //accept connection at any address available
 
-	// bind server socket to the address
-	if (bind(server_socket, (struct sockaddr*) &server_address, sizeof(server_address)) < 0) 
-	{
-		perror("bind() call failed!");
-		exit(1);
-	}
+	pthread_t tcp_handler_tid;
+	tcp_handler_t* tcp_handler = tcpHandlerInit(server_address, 50);
+	pthread_create(&tcp_handler_tid, NULL, &tcpHandlerMain, tcp_handler);
+	/********************************************/
+
+	/********* User input monitoring thread *******/
+	// pthread_t ui_tid;
+	// pthread_create(&ui_tid, NULL, &userInputThread, NULL);
+	/**********************************************/
+
+	while (tcp_handler->tcp_state != CONNECTED); //wait for tcp handler to make connection
 	
-	
-	if (listen(server_socket, 5) < 0) 
-	{
-		perror("listen() failed!");
-		exit(1);
-	}
-	
-	uint8_t loop_stop = false;
 	while (!loop_stop)  //loop to discard dead clients and wait for a reconnection 
-	{
-		printf("Waiting for client connection...\n");
-
-		int client_socket;
-		client_socket = accept(server_socket, NULL, NULL);
-		if (client_socket < 0) 
-		{
-			perror("accept() failed");
-			exit(1);
-		}
-
-		//configure TCP keepalive to detect dead client
-		uint8_t val = 1;
-		setsockopt(client_socket, SOL_SOCKET, SO_KEEPALIVE,&val, sizeof(val));
-		
-		printf("Connection established\n");
-			
+	{			
 		char time_str[TIME_STR_SIZE];
 		int i = 0;
-		useconds_t delay =100000; //1000 ms
+		useconds_t delay =10000; //1000 ms
 		//printf("Entering loop...\n");
 		while (!loop_stop)
 		{
@@ -151,29 +131,33 @@ int main()
 			(
 				time_str,"%lu.%06lu", curr_time_tv.tv_sec, curr_time_tv.tv_usec
 			);
-			//printf("Got time string\n");
+			// printf("Got time string\n");
 
 			double x;
 			x = sin(i*PI/180.0);
-			//printf("calculated sine\n");
-
+			// printf("calculated sine\n");
+			
 			size_t msg_size = HEADERSIZE + 2 + TIME_STR_SIZE; 
 			char msg[msg_size];
-			sprintf(msg,"%0*g_%s",HEADERSIZE, x, time_str);
+			snprintf(msg,msg_size,"%0*g_%s",HEADERSIZE, x, time_str);
 			size_t true_msg_size = strlen(msg);
-			//printf("built msg string\n");
-
-
-			//zmq socket send
-			/* 
-			if (zmq_send(publisher,msg, true_msg_size,ZMQ_DONTWAIT) < 0) {
-				perror("zmq_send() Error:");
-			}
-			printf("zmq sent\n"); 
-			*/
+			// printf("built msg string\n");
 
 			//standard socket send
-			ssize_t send_status = send(client_socket, msg, true_msg_size, MSG_NOSIGNAL);
+			// printf("From stamped_sine_server: tcp_state = %d\n", tcp_handler->tcp_state);
+			if (tcp_handler->tcp_state == CONNECTED)
+			{
+				printf("Sending write message to TCP Handler...\n");
+				tcpHandlerWrite(tcp_handler, msg, true_msg_size, 0, false);
+				printf("Sent write message to TCP Handler...\n");
+			}
+			else if (tcp_handler->tcp_state == ERROR)
+			{
+				// perror("4hgajdfs");
+			}
+
+			
+			/* ssize_t send_status = send(client_socket, msg, true_msg_size, MSG_NOSIGNAL);
 			if (send_status >= 0) 
 			{
 				if(send_status < true_msg_size) 
@@ -194,54 +178,54 @@ int main()
 			{
 				perror("Error in send(): ");
 				break;
-			}
+			} */
 			//printf("sent\n");
 
-			size_t rec_size = 100;
-			char received[rec_size];
-			if (recv(client_socket,received, rec_size, MSG_DONTWAIT) > 0) {
-				printf("Message received: %s\n", received);
-				loggerSendLogMsg(logger,received,sizeof(received),"./server_logs.txt",0,false);
-				printf("After log?\n");
-				if (strcmp(received, "CLOSE") == 0) {
-					printf("Stop Command Received\n");
-					loop_stop = true;
-					break;
+			if (tcp_handler->client_socket >= 0) //if handler has a valid client connection
+			{
+				size_t rec_size = 100;
+				char received[rec_size];
+				if (recv(tcp_handler->client_socket,received, rec_size, MSG_DONTWAIT) > 0) 
+				{
+					printf("Message received: %s\n", received);
+					loggerSendLogMsg(logger,received,sizeof(received),"./server_logs.txt",0,false);
+					printf("After log?\n");
+					if (strcmp(received, "CLOSE") == 0) 
+					{
+						printf("Stop Command Received\n");
+						loop_stop = true;
+						break;
+					}
 				}
 			}
 			//printf("rec\n"); 
-			
-			/* 
-			zmq_msg_t rec_msg;
-			zmq_msg_init(&rec_msg); 
-			if (zmq_msg_recv(&rec_msg, publisher, ZMQ_DONTWAIT) < 0) {
-				if (errno != EAGAIN) perror("zmq_msg_recv() ERROR: ");
-			}
-			else {
-				char* zmq_received = zmq_msg_data(&rec_msg);
-				printf("zmq_received=%s\n",zmq_received);
-				loggerSendLogMsg(logger,zmq_received,zmq_msg_size(&rec_msg),"./server_logs.txt",0,false);
-				if (strcmp(zmq_received, "CLOSE") == 0) {
-					printf("Stop Command Received\n");
-					loop_stop = true;
-				}
-			}
-			zmq_msg_close(&rec_msg);
-			printf("zmq_req\n"); 
-			*/
 
 			i += 5;
 			i = i % 360;
 
 			usleep(delay);
 		} // end while (!loop_stop)
-		close(client_socket);	
 	} // end while (1)
+
+	/******* Closing logger thread *******/
+	printf("Sending Logger Close\n");
 	loggerSendCloseMsg(logger,0,true);
+	printf("Waiting for Logger Close\n");
 	pthread_join(logger_tid,NULL);
-	// zmq_close(publisher);
-	// zmq_ctx_destroy(context);
-	close(server_socket);
+	printf("Destroying logger\n");
+	loggerDestroy(logger);
+
+	/******* Closing TCP thread *******/
+	printf("Sending Logger Close\n");
+	tcpHandlerClose(tcp_handler, 0, true);
+	printf("Waiting for Logger Close\n");
+	pthread_join(tcp_handler_tid,NULL);
+	printf("Destroying logger\n");
+	tcpHandlerDestroy(tcp_handler);
+
+	/******* Closing UI thread *******/
+	// pthread_join(ui_tid, NULL);
+	
 	printf("Exitted\n");
 	return 0;
 }

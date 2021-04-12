@@ -175,7 +175,23 @@ class TcpControl(baseClass, Ui_TcpControl):
 
     def readSocket(self):
         self.receive_led.toggle()
-        data_in = self.socket.readAll()
+        # data_in_len = self.socket.read(10).decode('utf-8')
+        # print(data_in_len)
+        # data_in = self.socket.read(int(data_in_len))
+        i = 0
+        while True:
+            first = self.socket.read(1)
+            if (str(first, 'utf-8') == '|'):
+                break
+            i = i+1
+        
+        data_count_b = self.socket.read(4)
+        data_count = int.from_bytes(data_count_b,byteorder='little',signed=False)
+        data_in = self.socket.read(data_count)
+                
+        # data_in = self.socket.readAll()
+        print("data_count:", data_count, i)
+        print("second read:", str(data_in,'utf-8'))
         self.sig_log_event.emit(log_event_string+"readSocket::received {}".format(str(data_in)))
         self.sig_broadcast_data.emit(data_in)
     

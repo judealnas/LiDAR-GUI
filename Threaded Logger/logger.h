@@ -10,8 +10,8 @@
 #include <fifo.h>
 
 typedef enum LoggerCommand {
-    LOG,
-    CLOSE
+    LOGGER_LOG,
+    LOGGER_CLOSE
 } logger_cmd_t;
 
 typedef struct LoggerMessage {
