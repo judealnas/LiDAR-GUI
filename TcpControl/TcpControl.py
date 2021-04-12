@@ -174,6 +174,14 @@ class TcpControl(baseClass, Ui_TcpControl):
 
 
     def readSocket(self):
+        """
+        This function is executed whenever data becomes available on the socket.
+        First, the socket is read until the start-of-data character byte.
+        Once the start-of-data byte is found, the next 4 bytes are read from the socket.
+        These 4 bytes are interpreed as a little-endian unsigned integer representing the
+        number of bytes in the TCP payload. That number of bytes is read from the socket.
+        The read data is broadcast via signals
+        """
         self.receive_led.toggle()
         # data_in_len = self.socket.read(10).decode('utf-8')
         # print(data_in_len)

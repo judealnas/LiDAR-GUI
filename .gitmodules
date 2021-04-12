@@ -1,0 +1,6 @@
+[submodule "Threaded-Logger"]
+	path = Threaded-Logger
+	url = https://github.com/SyrusVir/Threaded-Logger
+[submodule "Threaded-TCP"]
+	path = Threaded-TCP
+	url = https://github.com/SyrusVir/Threaded-TCP

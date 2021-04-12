@@ -6,8 +6,8 @@
 #include <signal.h>
 #include <string.h>
 #include <czmq.h>
-#include "Threaded Logger/logger.h"
-#include "TCP Handler/tcp_handler.h"
+#include "logger.h"
+#include "tcp_handler.h"
 
 #define PI 3.14159265
 
@@ -81,12 +81,6 @@ size_t getTimeString(char* str_result, size_t str_size, char delim)
 
 int main() 
 {
-	//print ZMQ version
-	int major;
-	int minor;
-	int patch;
-
-
 	/******** logging thread ********/
 	logger_t* logger = loggerCreate(30);
 	pthread_t logger_tid;
@@ -112,7 +106,7 @@ int main()
 	// pthread_create(&ui_tid, NULL, &userInputThread, NULL);
 	/**********************************************/
 
-	while (tcp_handler->tcp_state != CONNECTED); //wait for tcp handler to make connection
+	while (tcp_handler->tcp_state != TCPH_STATE_CONNECTED); //wait for tcp handler to make connection
 	
 	while (!loop_stop)  //loop to discard dead clients and wait for a reconnection 
 	{			
@@ -145,13 +139,13 @@ int main()
 
 			//standard socket send
 			// printf("From stamped_sine_server: tcp_state = %d\n", tcp_handler->tcp_state);
-			if (tcp_handler->tcp_state == CONNECTED)
+			if (tcp_handler->tcp_state == TCPH_STATE_CONNECTED)
 			{
 				printf("Sending write message to TCP Handler...\n");
 				tcpHandlerWrite(tcp_handler, msg, true_msg_size, 0, false);
 				printf("Sent write message to TCP Handler...\n");
 			}
-			else if (tcp_handler->tcp_state == ERROR)
+			else if (tcp_handler->tcp_state == TCPH_STATE_ERROR)
 			{
 				// perror("4hgajdfs");
 			}

@@ -10,9 +10,6 @@ import re
 from collections import deque
 import traceback
 
-#Ui_LidarPlot, baseClass = uic.loadUiType('Ui_LidarPlot.ui')
-#ui_builder = Ui_LidarPlot()
-
 class LidarPlot(qtw.QWidget):
     
     #"External" signals meant to be connected to other modules
@@ -96,17 +93,17 @@ class LidarPlot(qtw.QWidget):
         '''
         Parses a QByteArray expecting the following format:
 
-        [numeric data]_[epoch timestamp]
+        [epoch timestamp],[distance],[ToF],...
         '''
         # decode data from bytes into string
         data_str = data.data().decode('utf-8')
         
-        data_list = data_str.split('_')
-        num = float(data_list[0])
-        epoch = float(data_list[1])
-        print(num, epoch)
+        data_list = data_str.split(',')
+        epoch = float(data_list[0])
+        dist = float(data_list[1])
+        print(dist, epoch)
 
-        return num, epoch
+        return dist, epoch
 
     def clearData(self):
         self.buffer = []

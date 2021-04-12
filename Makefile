@@ -1,12 +1,19 @@
 CC=gcc
-LIBFLAGS= -lfifo -lm -pthread 
-FIFOPATH=/home/jude/Projects/General-FIFO
-LOGGERPATH=/home/jude/Projects/LiDAR-GUI/Threaded\ Logger
-TCPPATH = /home/jude/Projects/LiDAR-GUI/TCP\ Handler
+CFLAGS= -g -Wall -Wextra
+LIBFLAGS= -lpigpio -lm -pthread 
+DEPS=$(CURDIR)/Threaded-Logger/liblogger.a\
+$(CURDIR)/Threaded-TCP/libtcphandler.a
 
-stamped_sine_server: 
-	gcc stamped_sine_server.c $(LOGGERPATH)/logger.c $(TCPPATH)/tcp_handler.c -o stamped_sine_server.out -I $(LOGGERPATH) -I .$(TCPPATH)  -L$(FIFOPATH) $(LIBFLAGS)
+CLEANDEPS=$(addsuffix .clean,$(DEPS))
 
+%.out: $(DEPS)
+	$(CC) $(CFLAGS) $(subst .out,.c,$@) $^ -o $@ $(addprefix -I,$(dir $(DEPS))) -I. $(LIBFLAGS)
 
-clean_stamp:
-	rm stamped_sine_server 
+$(DEPS):
+	$(MAKE) -C $(@D) $(@F)
+
+.PHONY: clean
+clean: $(CLEANDEPS)
+	rm -f *.o *.a
+$(CLEANDEPS): %.clean:
+	$(MAKE) -C $(*D) clean 
