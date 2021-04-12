@@ -131,7 +131,8 @@ class TcpControl(baseClass, Ui_TcpControl):
         self.dis_conn_button.setEnabled(False)
         if not self.socket.waitForConnected(timeout_ms): #BLOCKING
             print("Failed to Connect!", self.socket.error())
-            self.sig_log_event.emit(log_event_string+f"connectSocket::failed to connect with {self.socket.error()}")
+            error_str = enum2string(self.socket.staticMetaObject, 'SocketError', self.socket.error())
+            self.sig_log_event.emit(log_event_string+f"connectSocket:: {} ERROR".format(error_str))
 
         self.dis_conn_button.setEnabled(True)
     
@@ -229,7 +230,9 @@ class TcpControl(baseClass, Ui_TcpControl):
         return self.writeSocket
     ###################################################
 
-            
+def enum2string(meta_obj: qtc.QObject.staticMetaObject, enum_name: str, enum_val: int):
+    return (meta_obj.enumerator(meta_obj.indexOfEnumerator(enum_name)).valueToKey(enum_val))
+
 if __name__ == "__main__":
     from StatusWindow import StatusWindow as MsgWindow
     
