@@ -5,8 +5,8 @@ sys.path.extend([os.path.join(os.path.dirname(__file__), x) for x in ['TcpContro
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
 
-from TcpControl import TcpControl 
-from LidarPlot import LidarPlot  
+from TcpControlWidget import TcpControl 
+from LidarPlotWidget import LidarPlot
 from StatusWindow import StatusWindow 
 from MsgControl import MsgControl
 

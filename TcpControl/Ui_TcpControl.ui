@@ -191,7 +191,7 @@
   <customwidget>
    <class>LedIndicator</class>
    <extends>QPushButton</extends>
-   <header>LedIndicatorWidget</header>
+   <header location="global">LedIndicatorWidget</header>
   </customwidget>
  </customwidgets>
  <resources/>

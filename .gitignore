@@ -10,3 +10,5 @@ experiment.py
 *.out
 /Makefile
 Makefile
+dist
+build

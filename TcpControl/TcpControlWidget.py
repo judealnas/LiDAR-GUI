@@ -4,6 +4,7 @@ sys.path.insert(0,dirname(dirname(__file__)))
 from PyQt5.QtNetwork import QTcpSocket, QHostAddress 
 from PyQt5 import QtCore as qtc, QtWidgets as qtw, uic, QtNetwork as qtn
 import random
+import LedIndicatorWidget
 #import zmq
 #import zmq.utils
 #from ZmqMonitor import ZmqMonitor
@@ -132,7 +133,7 @@ class TcpControl(baseClass, Ui_TcpControl):
         if not self.socket.waitForConnected(timeout_ms): #BLOCKING
             print("Failed to Connect!", self.socket.error())
             error_str = enum2string(self.socket.staticMetaObject, 'SocketError', self.socket.error())
-            self.sig_log_event.emit(log_event_string+f"connectSocket:: {} ERROR".format(error_str))
+            self.sig_log_event.emit(log_event_string+"connectSocket:: {} ERROR".format(error_str))
 
         self.dis_conn_button.setEnabled(True)
     
@@ -233,19 +234,19 @@ class TcpControl(baseClass, Ui_TcpControl):
 def enum2string(meta_obj: qtc.QObject.staticMetaObject, enum_name: str, enum_val: int):
     return (meta_obj.enumerator(meta_obj.indexOfEnumerator(enum_name)).valueToKey(enum_val))
 
-if __name__ == "__main__":
-    from StatusWindow import StatusWindow as MsgWindow
+# if __name__ == "__main__":
+#     from StatusWindow import StatusWindow as MsgWindow
     
-    class Manager(qtw.QApplication):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
+#     class Manager(qtw.QApplication):
+#         def __init__(self, *args, **kwargs):
+#             super().__init__(*args, **kwargs)
 
-            self.Tcp = TcpControl()
-            self.Tcp.show()
+#             self.Tcp = TcpControl()
+#             self.Tcp.show()
 
-            self.Msg = MsgWindow()
-            self.Msg.show()
+#             self.Msg = MsgWindow()
+#             self.Msg.show()
 
     
-    app = Manager(sys.argv)
-    sys.exit(app.exec_())
+#     app = Manager(sys.argv)
+#     sys.exit(app.exec_())
