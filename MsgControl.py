@@ -47,6 +47,9 @@ class MsgControl(qtw.QWidget):
     def setReceiveText(self, text):
         self.rec_lineedit.setText(text)
 
+    def getRecTextSlot(self):
+        return self.setReceiveText
+        
 if __name__ == "__main__":
     import sys
     app = qtw.QApplication(sys.argv)

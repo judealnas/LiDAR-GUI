@@ -4,13 +4,13 @@ block_cipher = None
 
 
 a = Analysis(['mainwindow.py'],
-             pathex=['/home/jude/Projects/LiDAR-GUI',\
-                '/home/jude/Projects/LiDAR-GUI/TcpControl',\
-                '/home/jude/Projects/LiDAR-GUI/LidarPlot'
+             pathex=['.',\
+                './TcpControl',\
+                './LidarPlot'
              ],
              binaries=[],
-             datas=[('/home/jude/Projects/LiDAR-GUI/TcpControl/Ui_TcpControl.ui','.')],
-             hiddenimports=['/home/jude/Projects/LiDAR-GUI/TcpControl/LedIndicatorWidget'],
+             datas=[('./TcpControl/Ui_TcpControl.ui','.')],
+             hiddenimports=['./TcpControl/LedIndicatorWidget'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
