@@ -197,7 +197,7 @@ class TcpControl(baseClass, Ui_TcpControl):
         
         data_count_b = self.socket.read(4)
         print("data_count_b:", str(data_count_b))
-        data_count = int.from_bytes(data_count_b,byteorder='little',signed=False)
+        data_count = int.from_bytes(data_count_b,byteorder='big',signed=False)
         data_in = self.socket.read(data_count)
                 
         # data_in = self.socket.readAll()
