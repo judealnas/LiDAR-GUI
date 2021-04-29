@@ -18,7 +18,12 @@ class StatusWindow(qtw.QPlainTextEdit):
         if os.path.isabs(path):
             self.log_path = path
         else:
-            self.log_path = os.path.join(os.path.dirname(__file__), self.log_file)
+            if getattr(sys, 'frozen', False):
+                application_path = os.path.dirname(sys.executable)
+            else:
+                application_path = os.path.dirname(__file__ )
+
+        self.log_path = os.path.join(application_path, self.log_file)
         self.initLog(self.log_path)
         self.setReadOnly(True) 
         self.view_recent = True

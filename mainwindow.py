@@ -44,8 +44,6 @@ class MainWindow(qtw.QMainWindow):
         self.lidar_plot.getLogSignal().connect(self.status_window.getAddMsgSlot())
         self.msg_control.getSendMsgSignal().connect(self.tcp_control.getWriteSocketSlot())
 
-        
-        
 def main():
     app = qtw.QApplication(sys.argv)
     main = MainWindow()

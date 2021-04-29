@@ -162,7 +162,7 @@ class LidarLogger(qtc.QObject):
     '''
 
     default_file = 'lidarplot_datafile.csv'
-    default_folder = os.path.dirname(__file__)
+    default_folder = os.path.dirname(sys.executable)
 
     def __init__(self,path=None,*args,**kwargs):
         super().__init__(*args,**kwargs)
